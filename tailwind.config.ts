@@ -59,6 +59,11 @@ export default {
         gold: "hsl(var(--gold))",
         xp: "hsl(var(--xp-bar))",
         streak: "hsl(var(--streak-flame))",
+        surface: {
+          DEFAULT: "hsl(var(--surface))",
+          foreground: "hsl(var(--surface-foreground))",
+        },
+        porcelain: "hsl(var(--porcelain))",
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

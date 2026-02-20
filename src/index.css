@@ -6,73 +6,74 @@
 
 @layer base {
   :root {
-    /* Cape Neto Dark Theme - Gamified Sales Dashboard */
-    --background: 222 47% 6%;
-    --foreground: 210 40% 96%;
+    /* Cape Neto Solutions — Brand Palette */
+    /* Bastille #2E1B2E → HSL(300, 26%, 14%) */
+    --background: 300 26% 14%;
+    --foreground: 195 12% 86%;
 
-    --card: 222 47% 9%;
-    --card-foreground: 210 40% 96%;
+    /* Card: slightly lighter Bastille */
+    --card: 300 26% 17%;
+    --card-foreground: 195 12% 86%;
 
-    --popover: 222 47% 8%;
-    --popover-foreground: 210 40% 96%;
+    --popover: 300 26% 15%;
+    --popover-foreground: 195 12% 86%;
 
-    /* Primary: Cyan/Teal for main actions */
-    --primary: 187 94% 43%;
-    --primary-foreground: 222 47% 6%;
+    /* Primary: International Orange #FF5712 → HSL(17, 100%, 54%) */
+    --primary: 17 100% 54%;
+    --primary-foreground: 0 0% 100%;
 
-    /* Secondary: Deep purple for accents */
-    --secondary: 263 70% 50%;
-    --secondary-foreground: 210 40% 98%;
+    /* Secondary: Toasted Almond #C9B294 → HSL(32, 34%, 68%) */
+    --secondary: 32 34% 68%;
+    --secondary-foreground: 300 26% 14%;
 
-    --muted: 222 47% 14%;
-    --muted-foreground: 215 20% 55%;
+    /* Muted: darker Bastille */
+    --muted: 300 26% 20%;
+    --muted-foreground: 195 12% 60%;
 
-    --accent: 187 70% 25%;
-    --accent-foreground: 210 40% 98%;
+    /* Accent: Porcelain #9FCAD0 → HSL(186, 30%, 72%) */
+    --accent: 186 30% 72%;
+    --accent-foreground: 300 26% 14%;
 
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 210 40% 98%;
+    /* Destructive: Deep Red #651C22 → HSL(354, 56%, 25%) */
+    --destructive: 354 56% 25%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 222 47% 16%;
-    --input: 222 47% 14%;
-    --ring: 187 94% 43%;
+    --border: 300 20% 22%;
+    --input: 300 26% 20%;
+    --ring: 17 100% 54%;
 
     --radius: 0.75rem;
 
-    /* Status Colors */
+    /* Status Colors — derived from brand */
     --status-green: 142 76% 46%;
-    --status-amber: 38 92% 50%;
-    --status-red: 0 84% 60%;
+    --status-amber: 32 34% 68%;
+    --status-red: 354 56% 40%;
 
-    /* Gamification Colors */
-    --gold: 45 93% 47%;
-    --xp-bar: 263 70% 50%;
-    --streak-flame: 25 95% 53%;
-    --level-glow: 187 94% 43%;
+    /* Gamification — brand-derived */
+    --gold: 32 34% 68%;
+    --xp-bar: 17 100% 54%;
+    --streak-flame: 17 100% 54%;
+    --level-glow: 17 100% 54%;
 
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(187 94% 43%) 0%, hsl(263 70% 50%) 100%);
-    --gradient-gold: linear-gradient(135deg, hsl(45 93% 47%) 0%, hsl(25 95% 53%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(222 47% 11%) 0%, hsl(222 47% 8%) 100%);
-    --gradient-success: linear-gradient(135deg, hsl(142 76% 46%) 0%, hsl(187 94% 43%) 100%);
-    
+    /* Surface: Nebula #D6DEE0 → HSL(195, 12%, 86%) */
+    --surface: 195 12% 86%;
+    --surface-foreground: 300 26% 14%;
+
+    /* Porcelain: #9FCAD0 → HSL(186, 30%, 72%) */
+    --porcelain: 186 30% 72%;
+
     /* Shadows */
-    --shadow-glow: 0 0 30px -5px hsl(187 94% 43% / 0.3);
-    --shadow-gold: 0 0 20px -5px hsl(45 93% 47% / 0.4);
-    --shadow-card: 0 4px 20px -2px hsl(222 47% 4% / 0.5);
+    --shadow-glow: 0 0 30px -5px hsl(17 100% 54% / 0.3);
+    --shadow-card: 0 4px 20px -2px hsl(300 26% 6% / 0.5);
 
-    --sidebar-background: 222 47% 8%;
-    --sidebar-foreground: 210 40% 96%;
-    --sidebar-primary: 187 94% 43%;
-    --sidebar-primary-foreground: 222 47% 6%;
-    --sidebar-accent: 222 47% 14%;
-    --sidebar-accent-foreground: 210 40% 96%;
-    --sidebar-border: 222 47% 16%;
-    --sidebar-ring: 187 94% 43%;
-  }
-
-  .dark {
-    /* Already dark by default */
+    --sidebar-background: 300 26% 11%;
+    --sidebar-foreground: 195 12% 86%;
+    --sidebar-primary: 17 100% 54%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 300 26% 18%;
+    --sidebar-accent-foreground: 195 12% 86%;
+    --sidebar-border: 300 20% 20%;
+    --sidebar-ring: 17 100% 54%;
   }
 }
 
@@ -88,16 +89,10 @@
 }
 
 @layer components {
-  /* Glowing text effects */
   .text-glow {
     text-shadow: 0 0 20px hsl(var(--primary) / 0.5);
   }
 
-  .text-glow-gold {
-    text-shadow: 0 0 20px hsl(var(--gold) / 0.6);
-  }
-
-  /* Card hover effects */
   .card-hover {
     @apply transition-all duration-300;
   }
@@ -106,45 +101,37 @@
     box-shadow: var(--shadow-glow);
   }
 
-  /* Status badges */
   .status-green {
     @apply bg-[hsl(var(--status-green))] text-white;
   }
   .status-amber {
-    @apply bg-[hsl(var(--status-amber))] text-black;
+    @apply bg-[hsl(var(--status-amber))] text-[hsl(var(--surface-foreground))];
   }
   .status-red {
     @apply bg-[hsl(var(--status-red))] text-white;
   }
 
-  /* Progress bar animations */
   .progress-animate {
     animation: progressPulse 2s ease-in-out infinite;
   }
 
-  /* XP bar gradient */
   .xp-bar-fill {
-    background: var(--gradient-primary);
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
   }
 
-  /* Streak flame animation */
   .streak-flame {
     animation: flamePulse 1.5s ease-in-out infinite;
   }
 
-  /* Level up glow */
   .level-glow {
     box-shadow: var(--shadow-glow);
     animation: levelPulse 2s ease-in-out infinite;
   }
 
-  /* Achievement badge */
   .achievement-badge {
-    background: var(--gradient-gold);
-    box-shadow: var(--shadow-gold);
+    background: linear-gradient(135deg, hsl(var(--secondary)) 0%, hsl(var(--primary)) 100%);
   }
 
-  /* Glass morphism */
   .glass {
     background: hsl(var(--card) / 0.8);
     backdrop-filter: blur(12px);
@@ -153,16 +140,15 @@
 }
 
 @layer utilities {
-  /* Gradient text */
   .gradient-text {
-    background: var(--gradient-primary);
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--secondary)) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .gradient-text-gold {
-    background: var(--gradient-gold);
+    background: linear-gradient(135deg, hsl(var(--secondary)) 0%, hsl(var(--primary)) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -180,11 +166,10 @@
 }
 
 @keyframes levelPulse {
-  0%, 100% { box-shadow: 0 0 20px -5px hsl(187 94% 43% / 0.3); }
-  50% { box-shadow: 0 0 30px -5px hsl(187 94% 43% / 0.5); }
+  0%, 100% { box-shadow: 0 0 20px -5px hsl(17 100% 54% / 0.3); }
+  50% { box-shadow: 0 0 30px -5px hsl(17 100% 54% / 0.5); }
 }
 
-/* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
