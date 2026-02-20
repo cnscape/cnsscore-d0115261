@@ -15,6 +15,8 @@ import AchievementsPage from "./pages/AchievementsPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import CampaignsPage from "./pages/CampaignsPage";
 import TeamPage from "./pages/TeamPage";
+import ClientsPage from "./pages/ClientsPage";
+import DealsPage from "./pages/DealsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -100,6 +102,14 @@ function AppRoutes() {
           </ProtectedRoute>
         } 
       />
+      <Route 
+        path="/deals" 
+        element={
+          <ProtectedRoute>
+            <DealsPage />
+          </ProtectedRoute>
+        } 
+      />
       
       {/* Admin routes */}
       <Route 
@@ -107,6 +117,22 @@ function AppRoutes() {
         element={
           <ProtectedRoute adminOnly>
             <AdminDashboard />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/admin/clients" 
+        element={
+          <ProtectedRoute adminOnly>
+            <ClientsPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/admin/deals" 
+        element={
+          <ProtectedRoute adminOnly>
+            <DealsPage adminView />
           </ProtectedRoute>
         } 
       />
@@ -123,6 +149,28 @@ function AppRoutes() {
         element={
           <ProtectedRoute adminOnly>
             <TeamPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/admin/commissions" 
+        element={
+          <ProtectedRoute adminOnly>
+            <div className="p-8">
+              <h1 className="text-3xl font-bold">Commissions</h1>
+              <p className="text-muted-foreground mt-2">Commission engine — coming soon...</p>
+            </div>
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/admin/funnel" 
+        element={
+          <ProtectedRoute adminOnly>
+            <div className="p-8">
+              <h1 className="text-3xl font-bold">Funnel Analytics</h1>
+              <p className="text-muted-foreground mt-2">Funnel diagnostics — coming soon...</p>
+            </div>
           </ProtectedRoute>
         } 
       />

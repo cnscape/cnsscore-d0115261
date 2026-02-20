@@ -9,7 +9,11 @@ import {
   Target,
   LogOut,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Briefcase,
+  TrendingUp,
+  DollarSign,
+  FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -25,15 +29,20 @@ export function Sidebar() {
 
   const repLinks = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/scorecard', label: 'Today\'s Scorecard', icon: ClipboardList },
+    { href: '/scorecard', label: "Today's Scorecard", icon: ClipboardList },
+    { href: '/deals', label: 'My Deals', icon: Briefcase },
     { href: '/history', label: 'My History', icon: History },
     { href: '/achievements', label: 'Achievements', icon: Trophy },
   ];
 
   const adminLinks = [
-    { href: '/admin', label: 'Team Dashboard', icon: LayoutDashboard },
+    { href: '/admin', label: 'Command Center', icon: LayoutDashboard },
+    { href: '/admin/clients', label: 'Clients', icon: Briefcase },
+    { href: '/admin/deals', label: 'All Deals', icon: FileText },
     { href: '/admin/campaigns', label: 'Campaigns', icon: Target },
     { href: '/admin/team', label: 'Team', icon: Users },
+    { href: '/admin/commissions', label: 'Commissions', icon: DollarSign },
+    { href: '/admin/funnel', label: 'Funnel Analytics', icon: TrendingUp },
     { href: '/admin/settings', label: 'Settings', icon: Settings },
   ];
 
@@ -48,8 +57,8 @@ export function Sidebar() {
       <div className="flex h-16 items-center justify-between border-b border-border px-4">
         {!collapsed && (
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
-              CN
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-xs">
+              CNS
             </div>
             <span className="font-semibold text-foreground">Cape Neto</span>
           </div>
@@ -79,7 +88,7 @@ export function Sidebar() {
       )}
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto p-4">
+      <nav className="flex-1 overflow-y-auto p-3">
         <ul className="space-y-1">
           {links.map(link => {
             const Icon = link.icon;
@@ -92,7 +101,7 @@ export function Sidebar() {
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                     isActive 
-                      ? "bg-primary/10 text-primary" 
+                      ? "bg-primary/15 text-primary border-l-2 border-primary" 
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
@@ -109,7 +118,7 @@ export function Sidebar() {
       <div className="border-t border-border p-4">
         {!collapsed && profile && (
           <div className="mb-3 flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary text-sm font-bold">
               {profile.full_name.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 truncate">
