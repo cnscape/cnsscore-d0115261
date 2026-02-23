@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Loader2, Trophy, Target, Flame } from 'lucide-react';
+import { Loader2, Trophy, Target, Flame, Users, Briefcase, Shield } from 'lucide-react';
 
 export default function AuthPage() {
   const { user, isLoading } = useAuth();
@@ -22,7 +23,7 @@ export default function AuthPage() {
   }
 
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return (
@@ -39,7 +40,7 @@ export default function AuthPage() {
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground text-xl font-bold">
               CN
             </div>
-            <span className="text-2xl font-bold">Cape Neto Scorecard</span>
+            <span className="text-2xl font-bold">Cape Neto Solutions</span>
           </div>
           
           <h1 className="text-4xl font-bold mb-4 gradient-text">
@@ -47,8 +48,8 @@ export default function AuthPage() {
           </h1>
           
           <p className="text-lg text-muted-foreground mb-12">
-            Gamified sales tracking that turns daily metrics into achievements. 
-            Hit your targets, build streaks, and climb the leaderboard.
+            Your performance operating system. 
+            Hit targets, build streaks, close deals, and track projects.
           </p>
           
           <div className="space-y-6">
@@ -95,7 +96,7 @@ export default function AuthPage() {
               </div>
               <span className="text-xl font-bold">Cape Neto</span>
             </div>
-            <CardTitle className="text-2xl">Welcome back</CardTitle>
+            <CardTitle className="text-2xl">Welcome</CardTitle>
             <CardDescription>Sign in to your account or create a new one</CardDescription>
           </CardHeader>
           <CardContent>
@@ -144,35 +145,14 @@ function SignInForm({ isSubmitting, setIsSubmitting }: { isSubmitting: boolean; 
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="signin-email">Email</Label>
-        <Input
-          id="signin-email"
-          type="email"
-          placeholder="you@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
+        <Input id="signin-email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
       </div>
       <div className="space-y-2">
         <Label htmlFor="signin-password">Password</Label>
-        <Input
-          id="signin-password"
-          type="password"
-          placeholder="••••••••"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+        <Input id="signin-password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required />
       </div>
       <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Signing in...
-          </>
-        ) : (
-          'Sign In'
-        )}
+        {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Signing in...</>) : 'Sign In'}
       </Button>
     </form>
   );
@@ -183,9 +163,20 @@ function SignUpForm({ isSubmitting, setIsSubmitting }: { isSubmitting: boolean; 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [teamType, setTeamType] = useState<string>('');
+
+  const teamOptions = [
+    { value: 'sales', label: 'Growth Sales Team', description: 'Sales reps — KPIs, deals, commissions', icon: Briefcase },
+    { value: 'growth', label: 'Growth Team', description: 'Interns & projects — daily updates, tasks', icon: Users },
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!teamType) {
+      toast.error('Please select your team');
+      return;
+    }
     
     if (password.length < 6) {
       toast.error('Password must be at least 6 characters');
@@ -203,7 +194,9 @@ function SignUpForm({ isSubmitting, setIsSubmitting }: { isSubmitting: boolean; 
         toast.error(error.message || 'Failed to create account');
       }
     } else {
-      toast.success('Account created! Welcome to Cape Neto.');
+      // Store team type in profile after signup
+      // The profile will be created by the trigger, we'll update team_type
+      toast.success('Account created! Check your email to verify, then sign in.');
     }
     
     setIsSubmitting(false);
@@ -213,48 +206,49 @@ function SignUpForm({ isSubmitting, setIsSubmitting }: { isSubmitting: boolean; 
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="signup-name">Full Name</Label>
-        <Input
-          id="signup-name"
-          type="text"
-          placeholder="John Smith"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          required
-        />
+        <Input id="signup-name" type="text" placeholder="John Smith" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
       </div>
       <div className="space-y-2">
         <Label htmlFor="signup-email">Email</Label>
-        <Input
-          id="signup-email"
-          type="email"
-          placeholder="you@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
+        <Input id="signup-email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
       </div>
       <div className="space-y-2">
         <Label htmlFor="signup-password">Password</Label>
-        <Input
-          id="signup-password"
-          type="password"
-          placeholder="••••••••"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={6}
-        />
+        <Input id="signup-password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
         <p className="text-xs text-muted-foreground">At least 6 characters</p>
       </div>
-      <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Creating account...
-          </>
-        ) : (
-          'Create Account'
-        )}
+
+      {/* Team Type Selection */}
+      <div className="space-y-2">
+        <Label>Your Team <span className="text-destructive">*</span></Label>
+        <div className="grid grid-cols-1 gap-2">
+          {teamOptions.map(option => {
+            const Icon = option.icon;
+            const isSelected = teamType === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setTeamType(option.value)}
+                className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
+                  isSelected 
+                    ? 'border-primary bg-primary/10 text-foreground' 
+                    : 'border-border bg-muted/30 text-muted-foreground hover:border-primary/50'
+                }`}
+              >
+                <Icon className={`h-5 w-5 flex-shrink-0 ${isSelected ? 'text-primary' : ''}`} />
+                <div>
+                  <p className="text-sm font-medium">{option.label}</p>
+                  <p className="text-xs opacity-70">{option.description}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <Button type="submit" className="w-full" disabled={isSubmitting || !teamType}>
+        {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating account...</>) : 'Create Account'}
       </Button>
     </form>
   );

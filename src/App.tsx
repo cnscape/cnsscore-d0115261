@@ -17,6 +17,8 @@ import CampaignsPage from "./pages/CampaignsPage";
 import TeamPage from "./pages/TeamPage";
 import ClientsPage from "./pages/ClientsPage";
 import DealsPage from "./pages/DealsPage";
+import DailyUpdatePage from "./pages/DailyUpdatePage";
+import ProjectsPage from "./pages/ProjectsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -32,13 +34,8 @@ function ProtectedRoute({ children, adminOnly = false }: { children: React.React
     );
   }
 
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  if (adminOnly && !isAdmin) {
-    return <Navigate to="/dashboard" replace />;
-  }
+  if (!user) return <Navigate to="/auth" replace />;
+  if (adminOnly && !isAdmin) return <Navigate to="/dashboard" replace />;
 
   return <>{children}</>;
 }
@@ -56,137 +53,40 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Public routes */}
       <Route path="/auth" element={<AuthPage />} />
       
-      {/* Redirect root based on auth status */}
       <Route 
         path="/" 
-        element={
-          user 
-            ? <Navigate to={isAdmin ? "/admin" : "/dashboard"} replace />
-            : <Navigate to="/auth" replace />
-        } 
+        element={user ? <Navigate to={isAdmin ? "/admin" : "/dashboard"} replace /> : <Navigate to="/auth" replace />} 
       />
       
-      {/* Rep routes */}
-      <Route 
-        path="/dashboard" 
-        element={
-          <ProtectedRoute>
-            <RepDashboard />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/scorecard" 
-        element={
-          <ProtectedRoute>
-            <ScorecardPage />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/history" 
-        element={
-          <ProtectedRoute>
-            <HistoryPage />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/achievements" 
-        element={
-          <ProtectedRoute>
-            <AchievementsPage />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/deals" 
-        element={
-          <ProtectedRoute>
-            <DealsPage />
-          </ProtectedRoute>
-        } 
-      />
+      {/* Shared routes */}
+      <Route path="/dashboard" element={<ProtectedRoute><RepDashboard /></ProtectedRoute>} />
+      <Route path="/scorecard" element={<ProtectedRoute><ScorecardPage /></ProtectedRoute>} />
+      <Route path="/deals" element={<ProtectedRoute><DealsPage /></ProtectedRoute>} />
+      <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
+      <Route path="/achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />
+      
+      {/* Growth Team routes */}
+      <Route path="/daily-update" element={<ProtectedRoute><DailyUpdatePage /></ProtectedRoute>} />
+      <Route path="/projects" element={<ProtectedRoute><ProjectsPage /></ProtectedRoute>} />
       
       {/* Admin routes */}
-      <Route 
-        path="/admin" 
-        element={
-          <ProtectedRoute adminOnly>
-            <AdminDashboard />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/admin/clients" 
-        element={
-          <ProtectedRoute adminOnly>
-            <ClientsPage />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/admin/deals" 
-        element={
-          <ProtectedRoute adminOnly>
-            <DealsPage adminView />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/admin/campaigns" 
-        element={
-          <ProtectedRoute adminOnly>
-            <CampaignsPage />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/admin/team" 
-        element={
-          <ProtectedRoute adminOnly>
-            <TeamPage />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/admin/commissions" 
-        element={
-          <ProtectedRoute adminOnly>
-            <div className="p-8">
-              <h1 className="text-3xl font-bold">Commissions</h1>
-              <p className="text-muted-foreground mt-2">Commission engine — coming soon...</p>
-            </div>
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/admin/funnel" 
-        element={
-          <ProtectedRoute adminOnly>
-            <div className="p-8">
-              <h1 className="text-3xl font-bold">Funnel Analytics</h1>
-              <p className="text-muted-foreground mt-2">Funnel diagnostics — coming soon...</p>
-            </div>
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/admin/settings" 
-        element={
-          <ProtectedRoute adminOnly>
-            <div className="p-8">
-              <h1 className="text-3xl font-bold">Settings</h1>
-              <p className="text-muted-foreground mt-2">Coming soon...</p>
-            </div>
-          </ProtectedRoute>
-        } 
-      />
+      <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
+      <Route path="/admin/clients" element={<ProtectedRoute adminOnly><ClientsPage /></ProtectedRoute>} />
+      <Route path="/admin/deals" element={<ProtectedRoute adminOnly><DealsPage adminView /></ProtectedRoute>} />
+      <Route path="/admin/campaigns" element={<ProtectedRoute adminOnly><CampaignsPage /></ProtectedRoute>} />
+      <Route path="/admin/team" element={<ProtectedRoute adminOnly><TeamPage /></ProtectedRoute>} />
+      <Route path="/admin/commissions" element={<ProtectedRoute adminOnly>
+        <div className="p-8"><h1 className="text-3xl font-bold">Commissions</h1><p className="text-muted-foreground mt-2">Commission engine — coming soon...</p></div>
+      </ProtectedRoute>} />
+      <Route path="/admin/funnel" element={<ProtectedRoute adminOnly>
+        <div className="p-8"><h1 className="text-3xl font-bold">Funnel Analytics</h1><p className="text-muted-foreground mt-2">Funnel diagnostics — coming soon...</p></div>
+      </ProtectedRoute>} />
+      <Route path="/admin/settings" element={<ProtectedRoute adminOnly>
+        <div className="p-8"><h1 className="text-3xl font-bold">Settings</h1><p className="text-muted-foreground mt-2">Coming soon...</p></div>
+      </ProtectedRoute>} />
       
-      {/* Catch-all */}
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

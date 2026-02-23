@@ -1,19 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
 import { 
-  LayoutDashboard, 
-  ClipboardList, 
-  History, 
-  Trophy, 
-  Settings, 
-  Users, 
-  Target,
-  LogOut,
-  ChevronLeft,
-  ChevronRight,
-  Briefcase,
-  TrendingUp,
-  DollarSign,
-  FileText
+  LayoutDashboard, ClipboardList, History, Trophy, Settings, Users, Target,
+  LogOut, ChevronLeft, ChevronRight, Briefcase, TrendingUp, DollarSign, 
+  FileText, FolderKanban, Send
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,10 +13,14 @@ import { StreakBadge } from '@/components/ui/streak-badge';
 
 export function Sidebar() {
   const location = useLocation();
-  const { profile, isAdmin, signOut } = useAuth();
+  const { profile, isAdmin, roles, signOut } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
 
-  const repLinks = [
+  // Determine team type from roles
+  const isGrowthTeam = roles.includes('growth_team' as any);
+  const isSalesRep = roles.includes('sales_rep');
+
+  const salesLinks = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/scorecard', label: "Today's Scorecard", icon: ClipboardList },
     { href: '/deals', label: 'My Deals', icon: Briefcase },
@@ -35,9 +28,16 @@ export function Sidebar() {
     { href: '/achievements', label: 'Achievements', icon: Trophy },
   ];
 
+  const growthLinks = [
+    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/daily-update', label: 'Daily Update', icon: Send },
+    { href: '/projects', label: 'My Projects', icon: FolderKanban },
+    { href: '/achievements', label: 'Achievements', icon: Trophy },
+  ];
+
   const adminLinks = [
     { href: '/admin', label: 'Command Center', icon: LayoutDashboard },
-    { href: '/admin/clients', label: 'Clients', icon: Briefcase },
+    { href: '/admin/clients', label: 'Clients & Offers', icon: Briefcase },
     { href: '/admin/deals', label: 'All Deals', icon: FileText },
     { href: '/admin/campaigns', label: 'Campaigns', icon: Target },
     { href: '/admin/team', label: 'Team', icon: Users },
@@ -46,7 +46,8 @@ export function Sidebar() {
     { href: '/admin/settings', label: 'Settings', icon: Settings },
   ];
 
-  const links = isAdmin ? adminLinks : repLinks;
+  const links = isAdmin ? adminLinks : isGrowthTeam ? growthLinks : salesLinks;
+  const roleLabel = isAdmin ? 'Admin' : isGrowthTeam ? 'Growth Team' : 'Sales Rep';
 
   return (
     <aside className={cn(
@@ -63,27 +64,16 @@ export function Sidebar() {
             <span className="font-semibold text-foreground">Cape Neto</span>
           </div>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setCollapsed(!collapsed)}
-          className="h-8 w-8"
-        >
+        <Button variant="ghost" size="icon" onClick={() => setCollapsed(!collapsed)} className="h-8 w-8">
           {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
       </div>
 
-      {/* User Stats */}
+      {/* User Stats (non-admin) */}
       {!collapsed && profile && !isAdmin && (
         <div className="border-b border-border p-4 space-y-4">
-          <XPProgress 
-            currentXP={profile.total_xp} 
-            level={profile.level} 
-          />
-          <StreakBadge 
-            streak={profile.current_streak} 
-            longestStreak={profile.longest_streak}
-          />
+          <XPProgress currentXP={profile.total_xp} level={profile.level} />
+          <StreakBadge streak={profile.current_streak} longestStreak={profile.longest_streak} />
         </div>
       )}
 
@@ -93,7 +83,6 @@ export function Sidebar() {
           {links.map(link => {
             const Icon = link.icon;
             const isActive = location.pathname === link.href;
-            
             return (
               <li key={link.href}>
                 <Link
@@ -123,18 +112,13 @@ export function Sidebar() {
             </div>
             <div className="flex-1 truncate">
               <p className="text-sm font-medium truncate">{profile.full_name}</p>
-              <p className="text-xs text-muted-foreground">
-                {isAdmin ? 'Admin' : 'Sales Rep'}
-              </p>
+              <p className="text-xs text-muted-foreground">{roleLabel}</p>
             </div>
           </div>
         )}
         <Button
           variant="ghost"
-          className={cn(
-            "w-full justify-start text-muted-foreground hover:text-foreground",
-            collapsed && "justify-center px-2"
-          )}
+          className={cn("w-full justify-start text-muted-foreground hover:text-foreground", collapsed && "justify-center px-2")}
           onClick={signOut}
         >
           <LogOut className="h-5 w-5" />
