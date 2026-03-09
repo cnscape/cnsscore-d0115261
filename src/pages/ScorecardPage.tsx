@@ -213,10 +213,11 @@ export default function ScorecardPage() {
                   </Label>
                   <Input
                     id="conversations"
-                    type="number"
-                    min="0"
-                    value={conversationsStarted}
+                    type="text"
+                    inputMode="numeric"
+                    value={conversationsStarted || ''}
                     onChange={(e) => setConversationsStarted(parseInt(e.target.value) || 0)}
+                    placeholder="0"
                     className="text-lg font-mono"
                   />
                   <p className="text-xs text-muted-foreground">
