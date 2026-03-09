@@ -288,11 +288,11 @@ export default function ScorecardPage() {
                     </Label>
                     <Input
                       id="revenue"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={revenueCollected}
+                      type="text"
+                      inputMode="decimal"
+                      value={revenueCollected || ''}
                       onChange={(e) => setRevenueCollected(parseFloat(e.target.value) || 0)}
+                      placeholder="0.00"
                       className="font-mono"
                     />
                   </div>
