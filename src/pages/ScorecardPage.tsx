@@ -232,10 +232,11 @@ export default function ScorecardPage() {
                   </Label>
                   <Input
                     id="followups"
-                    type="number"
-                    min="0"
-                    value={followUpsSent}
+                    type="text"
+                    inputMode="numeric"
+                    value={followUpsSent || ''}
                     onChange={(e) => setFollowUpsSent(parseInt(e.target.value) || 0)}
+                    placeholder="0"
                     className="text-lg font-mono"
                   />
                 </div>
