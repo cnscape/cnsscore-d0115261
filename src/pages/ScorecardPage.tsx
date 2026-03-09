@@ -213,10 +213,11 @@ export default function ScorecardPage() {
                   </Label>
                   <Input
                     id="conversations"
-                    type="number"
-                    min="0"
-                    value={conversationsStarted}
+                    type="text"
+                    inputMode="numeric"
+                    value={conversationsStarted || ''}
                     onChange={(e) => setConversationsStarted(parseInt(e.target.value) || 0)}
+                    placeholder="0"
                     className="text-lg font-mono"
                   />
                   <p className="text-xs text-muted-foreground">
@@ -231,10 +232,11 @@ export default function ScorecardPage() {
                   </Label>
                   <Input
                     id="followups"
-                    type="number"
-                    min="0"
-                    value={followUpsSent}
+                    type="text"
+                    inputMode="numeric"
+                    value={followUpsSent || ''}
                     onChange={(e) => setFollowUpsSent(parseInt(e.target.value) || 0)}
+                    placeholder="0"
                     className="text-lg font-mono"
                   />
                 </div>
@@ -246,10 +248,11 @@ export default function ScorecardPage() {
                   </Label>
                   <Input
                     id="registrations"
-                    type="number"
-                    min="0"
-                    value={paidRegistrations}
+                    type="text"
+                    inputMode="numeric"
+                    value={paidRegistrations || ''}
                     onChange={(e) => setPaidRegistrations(parseInt(e.target.value) || 0)}
+                    placeholder="0"
                     className="text-lg font-mono"
                   />
                 </div>
@@ -269,10 +272,11 @@ export default function ScorecardPage() {
                     </Label>
                     <Input
                       id="calls"
-                      type="number"
-                      min="0"
-                      value={callsMade}
+                      type="text"
+                      inputMode="numeric"
+                      value={callsMade || ''}
                       onChange={(e) => setCallsMade(parseInt(e.target.value) || 0)}
+                      placeholder="0"
                       className="font-mono"
                     />
                   </div>
@@ -284,11 +288,11 @@ export default function ScorecardPage() {
                     </Label>
                     <Input
                       id="revenue"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={revenueCollected}
+                      type="text"
+                      inputMode="decimal"
+                      value={revenueCollected || ''}
                       onChange={(e) => setRevenueCollected(parseFloat(e.target.value) || 0)}
+                      placeholder="0.00"
                       className="font-mono"
                     />
                   </div>
