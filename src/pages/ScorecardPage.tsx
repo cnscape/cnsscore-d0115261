@@ -248,10 +248,11 @@ export default function ScorecardPage() {
                   </Label>
                   <Input
                     id="registrations"
-                    type="number"
-                    min="0"
-                    value={paidRegistrations}
+                    type="text"
+                    inputMode="numeric"
+                    value={paidRegistrations || ''}
                     onChange={(e) => setPaidRegistrations(parseInt(e.target.value) || 0)}
+                    placeholder="0"
                     className="text-lg font-mono"
                   />
                 </div>
