@@ -272,10 +272,11 @@ export default function ScorecardPage() {
                     </Label>
                     <Input
                       id="calls"
-                      type="number"
-                      min="0"
-                      value={callsMade}
+                      type="text"
+                      inputMode="numeric"
+                      value={callsMade || ''}
                       onChange={(e) => setCallsMade(parseInt(e.target.value) || 0)}
+                      placeholder="0"
                       className="font-mono"
                     />
                   </div>
