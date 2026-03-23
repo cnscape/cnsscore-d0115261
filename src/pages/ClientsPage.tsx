@@ -60,7 +60,7 @@ export default function ClientsPage() {
   const fetchClients = async () => {
     setIsLoading(true);
     const { data } = await supabase.from('clients').select('*').order('created_at', { ascending: false });
-    if (data) setClients(data as Client[]);
+    if (data) setClients(data as unknown as Client[]);
     setIsLoading(false);
   };
 
