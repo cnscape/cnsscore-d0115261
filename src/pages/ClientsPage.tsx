@@ -22,6 +22,7 @@ interface Client {
   revenue_share_percent: number;
   flat_commission_amount: number;
   is_active: boolean;
+  requires_link: boolean;
   notes: string | null;
   created_at: string;
 }
