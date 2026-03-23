@@ -19,6 +19,7 @@ import ClientsPage from "./pages/ClientsPage";
 import DealsPage from "./pages/DealsPage";
 import DailyUpdatePage from "./pages/DailyUpdatePage";
 import ProjectsPage from "./pages/ProjectsPage";
+import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -64,6 +65,7 @@ function AppRoutes() {
       <Route path="/dashboard" element={<ProtectedRoute><RepDashboard /></ProtectedRoute>} />
       <Route path="/scorecard" element={<ProtectedRoute><ScorecardPage /></ProtectedRoute>} />
       <Route path="/deals" element={<ProtectedRoute><DealsPage /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
       <Route path="/achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />
       
@@ -83,9 +85,7 @@ function AppRoutes() {
       <Route path="/admin/funnel" element={<ProtectedRoute adminOnly>
         <div className="p-8"><h1 className="text-3xl font-bold">Funnel Analytics</h1><p className="text-muted-foreground mt-2">Funnel diagnostics — coming soon...</p></div>
       </ProtectedRoute>} />
-      <Route path="/admin/settings" element={<ProtectedRoute adminOnly>
-        <div className="p-8"><h1 className="text-3xl font-bold">Settings</h1><p className="text-muted-foreground mt-2">Coming soon...</p></div>
-      </ProtectedRoute>} />
+      <Route path="/admin/settings" element={<ProtectedRoute adminOnly><SettingsPage /></ProtectedRoute>} />
       
       <Route path="*" element={<NotFound />} />
     </Routes>

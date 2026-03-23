@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Briefcase, Loader2, Pencil } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Plus, Briefcase, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Client {
@@ -21,6 +22,7 @@ interface Client {
   revenue_share_percent: number;
   flat_commission_amount: number;
   is_active: boolean;
+  requires_link: boolean;
   notes: string | null;
   created_at: string;
 }
@@ -58,7 +60,7 @@ export default function ClientsPage() {
   const fetchClients = async () => {
     setIsLoading(true);
     const { data } = await supabase.from('clients').select('*').order('created_at', { ascending: false });
-    if (data) setClients(data as Client[]);
+    if (data) setClients(data as unknown as Client[]);
     setIsLoading(false);
   };
 
@@ -183,6 +185,13 @@ export default function ClientsPage() {
                     <Input type="number" value={flatCommission} onChange={e => setFlatCommission(Number(e.target.value))} />
                   </div>
                 )}
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <Label>Requires Lead Link</Label>
+                    <p className="text-xs text-muted-foreground">Deals for this client will require a URL link</p>
+                  </div>
+                  <Switch />
+                </div>
                 <Button onClick={handleAddClient} className="w-full" disabled={!clientName}>Add Client</Button>
               </div>
             </DialogContent>
