@@ -108,7 +108,7 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
     }
 
     const { data: dealsData } = await dealsQuery;
-    if (dealsData) setDeals(dealsData as Deal[]);
+    if (dealsData) setDeals(dealsData as unknown as Deal[]);
 
     setIsLoading(false);
   };
