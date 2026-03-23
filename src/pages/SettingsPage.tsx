@@ -49,13 +49,14 @@ export default function SettingsPage() {
         .maybeSingle();
       
       if (data) {
+        const d = data as any;
         setFormData({
-          full_name: data.full_name || '',
-          phone: (data as any).phone || '',
-          city: (data as any).city || '',
-          province: (data as any).province || '',
-          country: (data as any).country || 'South Africa',
-          avatar_url: data.avatar_url || '',
+          full_name: d.full_name || '',
+          phone: d.phone || '',
+          city: d.city || '',
+          province: d.province || '',
+          country: d.country || 'South Africa',
+          avatar_url: d.avatar_url || '',
         });
       }
       setIsLoading(false);

@@ -216,7 +216,7 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
 
     toast.success(`Client "${name}" created!`);
     const { data: refreshed } = await supabase.from('clients').select('id, name, revenue_share_percent, requires_link').eq('is_active', true);
-    if (refreshed) setClients(refreshed as Client[]);
+    if (refreshed) setClients(refreshed as unknown as Client[]);
     
     return data?.id || null;
   };
