@@ -134,6 +134,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           notes: string | null
+          requires_link: boolean | null
           revenue_model: Database["public"]["Enums"]["revenue_model_type"]
           revenue_share_percent: number | null
           start_date: string
@@ -147,6 +148,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           notes?: string | null
+          requires_link?: boolean | null
           revenue_model?: Database["public"]["Enums"]["revenue_model_type"]
           revenue_share_percent?: number | null
           start_date?: string
@@ -160,6 +162,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           notes?: string | null
+          requires_link?: boolean | null
           revenue_model?: Database["public"]["Enums"]["revenue_model_type"]
           revenue_share_percent?: number | null
           start_date?: string
@@ -268,6 +271,7 @@ export type Database = {
           gross_revenue: number | null
           id: string
           lead_contact: string | null
+          lead_link: string | null
           lead_name: string | null
           lost_reason: string | null
           notes: string | null
@@ -291,6 +295,7 @@ export type Database = {
           gross_revenue?: number | null
           id?: string
           lead_contact?: string | null
+          lead_link?: string | null
           lead_name?: string | null
           lost_reason?: string | null
           notes?: string | null
@@ -314,6 +319,7 @@ export type Database = {
           gross_revenue?: number | null
           id?: string
           lead_contact?: string | null
+          lead_link?: string | null
           lead_name?: string | null
           lost_reason?: string | null
           notes?: string | null
@@ -530,6 +536,8 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          city: string | null
+          country: string | null
           created_at: string | null
           current_streak: number | null
           full_name: string
@@ -537,12 +545,16 @@ export type Database = {
           is_active: boolean | null
           level: number | null
           longest_streak: number | null
+          phone: string | null
+          province: string | null
           total_xp: number | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
           avatar_url?: string | null
+          city?: string | null
+          country?: string | null
           created_at?: string | null
           current_streak?: number | null
           full_name: string
@@ -550,12 +562,16 @@ export type Database = {
           is_active?: boolean | null
           level?: number | null
           longest_streak?: number | null
+          phone?: string | null
+          province?: string | null
           total_xp?: number | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
           avatar_url?: string | null
+          city?: string | null
+          country?: string | null
           created_at?: string | null
           current_streak?: number | null
           full_name?: string
@@ -563,6 +579,8 @@ export type Database = {
           is_active?: boolean | null
           level?: number | null
           longest_streak?: number | null
+          phone?: string | null
+          province?: string | null
           total_xp?: number | null
           updated_at?: string | null
           user_id?: string
