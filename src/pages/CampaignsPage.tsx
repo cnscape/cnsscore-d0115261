@@ -6,15 +6,24 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Progress } from '@/components/ui/progress';
 import { Campaign, Target } from '@/lib/supabase-types';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Loader2, Plus, Pencil, Target as TargetIcon } from 'lucide-react';
+import { Loader2, Plus, Pencil, Target as TargetIcon, MessageSquare, Phone, DollarSign, UserCheck } from 'lucide-react';
+
+interface DealRow {
+  id: string;
+  status: string;
+  channel: string | null;
+  revenue: number | null;
+  campaign: string | null;
+}
 
 export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [targets, setTargets] = useState<Target[]>([]);
+  const [deals, setDeals] = useState<DealRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingCampaign, setIsAddingCampaign] = useState(false);
   const [isAddingTarget, setIsAddingTarget] = useState(false);
@@ -27,7 +36,9 @@ export default function CampaignsPage() {
   
   // Target form
   const [targetConversations, setTargetConversations] = useState(15);
-  const [targetRegistrations, setTargetRegistrations] = useState(0.5);
+  const [targetRegistrations, setTargetRegistrations] = useState(1);
+  const [targetRevenue, setTargetRevenue] = useState(20000);
+  const [targetCalls, setTargetCalls] = useState(10);
   const [targetStartDate, setTargetStartDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [targetEndDate, setTargetEndDate] = useState('');
 
@@ -38,13 +49,15 @@ export default function CampaignsPage() {
   const fetchData = async () => {
     setIsLoading(true);
     
-    const [campaignsRes, targetsRes] = await Promise.all([
+    const [campaignsRes, targetsRes, dealsRes] = await Promise.all([
       supabase.from('campaigns').select('*').order('name'),
-      supabase.from('targets').select('*').order('start_date', { ascending: false })
+      supabase.from('targets').select('*').order('start_date', { ascending: false }),
+      supabase.from('deals').select('id, status, channel, revenue, campaign'),
     ]);
     
     if (campaignsRes.data) setCampaigns(campaignsRes.data as Campaign[]);
     if (targetsRes.data) setTargets(targetsRes.data as Target[]);
+    if (dealsRes.data) setDeals(dealsRes.data as DealRow[]);
     
     setIsLoading(false);
   };
@@ -95,8 +108,27 @@ export default function CampaignsPage() {
     }
   };
 
-  const getTargetsForCampaign = (campaignId: string) => {
-    return targets.filter(t => t.campaign_id === campaignId);
+  const getCampaignProgress = (campaignId: string) => {
+    // Match deals where campaign field = campaign id or campaign name
+    const campaign = campaigns.find(c => c.id === campaignId);
+    const campaignDeals = deals.filter(d => d.campaign === campaignId || d.campaign === campaign?.name);
+    const wonDeals = campaignDeals.filter(d => d.status === 'won');
+    
+    return {
+      conversations: campaignDeals.length,
+      calls: campaignDeals.filter(d => d.channel === 'call' || d.channel === 'phone').length,
+      revenue: wonDeals.reduce((s, d) => s + (d.revenue || 0), 0),
+      paidRegistrations: wonDeals.length,
+    };
+  };
+
+  const getActiveTarget = (campaignId: string) => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    return targets.find(t => 
+      t.campaign_id === campaignId &&
+      t.start_date <= today &&
+      (!t.end_date || t.end_date >= today)
+    );
   };
 
   if (isLoading) {
@@ -114,8 +146,8 @@ export default function CampaignsPage() {
       <div className="p-6 lg:p-8 space-y-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Campaigns & Targets</h1>
-            <p className="text-muted-foreground">Manage campaigns and set performance targets</p>
+            <h1 className="text-3xl font-bold">Campaigns</h1>
+            <p className="text-muted-foreground">Live campaign tracking powered by deals data</p>
           </div>
           
           <Dialog open={isAddingCampaign} onOpenChange={setIsAddingCampaign}>
@@ -128,7 +160,7 @@ export default function CampaignsPage() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Add Campaign</DialogTitle>
-                <DialogDescription>Create a new campaign for your team to track.</DialogDescription>
+                <DialogDescription>Create a new campaign to track.</DialogDescription>
               </DialogHeader>
               <div className="space-y-4 pt-4">
                 <div className="space-y-2">
@@ -167,14 +199,22 @@ export default function CampaignsPage() {
           </Dialog>
         </div>
 
-        {/* Campaigns Grid */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Campaigns Grid with Live Progress */}
+        <div className="grid gap-6 md:grid-cols-2">
           {campaigns.map(campaign => {
-            const campaignTargets = getTargetsForCampaign(campaign.id);
-            const activeTarget = campaignTargets.find(t => 
-              t.start_date <= format(new Date(), 'yyyy-MM-dd') &&
-              (!t.end_date || t.end_date >= format(new Date(), 'yyyy-MM-dd'))
-            );
+            const progress = getCampaignProgress(campaign.id);
+            const target = getActiveTarget(campaign.id);
+            
+            // Use targets or defaults for progress bars
+            const convTarget = target?.conversations_target || targetConversations;
+            const regTarget = target?.paid_registrations_target || targetRegistrations;
+            const revTarget = targetRevenue;
+            const callTarget = targetCalls;
+            
+            const convPercent = Math.min((progress.conversations / (convTarget || 1)) * 100, 100);
+            const callPercent = Math.min((progress.calls / (callTarget || 1)) * 100, 100);
+            const revPercent = Math.min((progress.revenue / (revTarget || 1)) * 100, 100);
+            const regPercent = Math.min((progress.paidRegistrations / (regTarget || 1)) * 100, 100);
             
             return (
               <Card key={campaign.id} className="border-border">
@@ -187,7 +227,7 @@ export default function CampaignsPage() {
                       />
                       <CardTitle className="text-lg">{campaign.name}</CardTitle>
                     </div>
-                    <span className={`text-xs px-2 py-1 rounded ${campaign.is_active ? 'bg-status-green/20 text-status-green' : 'bg-muted text-muted-foreground'}`}>
+                    <span className={`text-xs px-2 py-1 rounded ${campaign.is_active ? 'bg-[hsl(var(--status-green))]/20 text-[hsl(var(--status-green))]' : 'bg-muted text-muted-foreground'}`}>
                       {campaign.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </div>
@@ -196,25 +236,47 @@ export default function CampaignsPage() {
                   )}
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {activeTarget ? (
-                    <div className="p-3 rounded-lg bg-muted/50 space-y-2">
-                      <div className="flex items-center gap-2 text-sm font-medium">
-                        <TargetIcon className="h-4 w-4 text-primary" />
-                        Current Target
+                  {/* Live Progress Bars */}
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex items-center justify-between text-sm mb-1">
+                        <span className="flex items-center gap-1.5"><MessageSquare className="h-3.5 w-3.5 text-muted-foreground" /> Conversations</span>
+                        <span className="font-mono text-xs">{progress.conversations} / {convTarget}</span>
                       </div>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Conversations:</span>
-                          <span className="ml-2 font-mono">{activeTarget.conversations_target}/day</span>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Paid Regs:</span>
-                          <span className="ml-2 font-mono">{activeTarget.paid_registrations_target}/day</span>
-                        </div>
-                      </div>
+                      <Progress value={convPercent} className="h-2" />
                     </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No active target set</p>
+                    
+                    <div>
+                      <div className="flex items-center justify-between text-sm mb-1">
+                        <span className="flex items-center gap-1.5"><Phone className="h-3.5 w-3.5 text-muted-foreground" /> Calls</span>
+                        <span className="font-mono text-xs">{progress.calls} / {callTarget}</span>
+                      </div>
+                      <Progress value={callPercent} className="h-2" />
+                    </div>
+                    
+                    <div>
+                      <div className="flex items-center justify-between text-sm mb-1">
+                        <span className="flex items-center gap-1.5"><DollarSign className="h-3.5 w-3.5 text-muted-foreground" /> Revenue</span>
+                        <span className="font-mono text-xs">R{progress.revenue.toLocaleString()} / R{revTarget.toLocaleString()}</span>
+                      </div>
+                      <Progress value={revPercent} className="h-2" />
+                    </div>
+                    
+                    <div>
+                      <div className="flex items-center justify-between text-sm mb-1">
+                        <span className="flex items-center gap-1.5"><UserCheck className="h-3.5 w-3.5 text-muted-foreground" /> Paid Registrations</span>
+                        <span className="font-mono text-xs">{progress.paidRegistrations} / {regTarget}</span>
+                      </div>
+                      <Progress value={regPercent} className="h-2" />
+                    </div>
+                  </div>
+
+                  {/* Target info */}
+                  {target && (
+                    <div className="p-2 rounded-lg bg-muted/50 text-xs text-muted-foreground flex items-center gap-2">
+                      <TargetIcon className="h-3.5 w-3.5 text-primary" />
+                      Target: {target.conversations_target} conv/day, {target.paid_registrations_target} regs/day
+                    </div>
                   )}
                   
                   <Button 
@@ -227,57 +289,19 @@ export default function CampaignsPage() {
                     }}
                   >
                     <Pencil className="h-4 w-4 mr-2" />
-                    {activeTarget ? 'Add New Target' : 'Set Target'}
+                    {target ? 'Update Target' : 'Set Target'}
                   </Button>
                 </CardContent>
               </Card>
             );
           })}
-        </div>
-
-        {/* Target History */}
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Target History</h2>
-          <div className="rounded-xl border border-border overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead>Campaign</TableHead>
-                  <TableHead>Conversations/Day</TableHead>
-                  <TableHead>Paid Regs/Day</TableHead>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead>End Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {targets.map(target => {
-                  const campaign = campaigns.find(c => c.id === target.campaign_id);
-                  return (
-                    <TableRow key={target.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div 
-                            className="h-2 w-2 rounded-full"
-                            style={{ backgroundColor: campaign?.color }}
-                          />
-                          {campaign?.name}
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-mono">{target.conversations_target}</TableCell>
-                      <TableCell className="font-mono">{target.paid_registrations_target}</TableCell>
-                      <TableCell>{format(new Date(target.start_date), 'MMM d, yyyy')}</TableCell>
-                      <TableCell>
-                        {target.end_date 
-                          ? format(new Date(target.end_date), 'MMM d, yyyy')
-                          : <span className="text-muted-foreground">Ongoing</span>
-                        }
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+          {campaigns.length === 0 && (
+            <Card className="md:col-span-2">
+              <CardContent className="p-12 text-center text-muted-foreground">
+                No campaigns yet. Create your first campaign to start tracking.
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Add Target Dialog */}
@@ -285,30 +309,28 @@ export default function CampaignsPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Set Target for {selectedCampaign?.name}</DialogTitle>
-              <DialogDescription>Define daily targets for sales reps on this campaign.</DialogDescription>
+              <DialogDescription>Define targets for this campaign.</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 pt-4">
-              <div className="space-y-2">
-                <Label>Conversations per Day</Label>
-                <Input 
-                  type="number"
-                  min="1"
-                  value={targetConversations} 
-                  onChange={(e) => setTargetConversations(parseInt(e.target.value) || 0)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Paid Registrations per Day</Label>
-                <Input 
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={targetRegistrations} 
-                  onChange={(e) => setTargetRegistrations(parseFloat(e.target.value) || 0)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  0.5 = 1 registration every 2 days
-                </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Conversations Target</Label>
+                  <Input 
+                    type="number"
+                    min="1"
+                    value={targetConversations} 
+                    onChange={(e) => setTargetConversations(parseInt(e.target.value) || 0)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Paid Registrations Target</Label>
+                  <Input 
+                    type="number"
+                    min="0"
+                    value={targetRegistrations} 
+                    onChange={(e) => setTargetRegistrations(parseFloat(e.target.value) || 0)}
+                  />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
