@@ -185,6 +185,13 @@ export default function ClientsPage() {
                     <Input type="number" value={flatCommission} onChange={e => setFlatCommission(Number(e.target.value))} />
                   </div>
                 )}
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <Label>Requires Lead Link</Label>
+                    <p className="text-xs text-muted-foreground">Deals for this client will require a URL link</p>
+                  </div>
+                  <Switch />
+                </div>
                 <Button onClick={handleAddClient} className="w-full" disabled={!clientName}>Add Client</Button>
               </div>
             </DialogContent>
