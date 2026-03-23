@@ -65,6 +65,7 @@ function AppRoutes() {
       <Route path="/dashboard" element={<ProtectedRoute><RepDashboard /></ProtectedRoute>} />
       <Route path="/scorecard" element={<ProtectedRoute><ScorecardPage /></ProtectedRoute>} />
       <Route path="/deals" element={<ProtectedRoute><DealsPage /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
       <Route path="/achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />
       
