@@ -85,9 +85,7 @@ function AppRoutes() {
       <Route path="/admin/funnel" element={<ProtectedRoute adminOnly>
         <div className="p-8"><h1 className="text-3xl font-bold">Funnel Analytics</h1><p className="text-muted-foreground mt-2">Funnel diagnostics — coming soon...</p></div>
       </ProtectedRoute>} />
-      <Route path="/admin/settings" element={<ProtectedRoute adminOnly>
-        <div className="p-8"><h1 className="text-3xl font-bold">Settings</h1><p className="text-muted-foreground mt-2">Coming soon...</p></div>
-      </ProtectedRoute>} />
+      <Route path="/admin/settings" element={<ProtectedRoute adminOnly><SettingsPage /></ProtectedRoute>} />
       
       <Route path="*" element={<NotFound />} />
     </Routes>
