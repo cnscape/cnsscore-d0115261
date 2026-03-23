@@ -26,6 +26,7 @@ export function Sidebar() {
     { href: '/deals', label: 'My Deals', icon: Briefcase },
     { href: '/history', label: 'My History', icon: History },
     { href: '/achievements', label: 'Achievements', icon: Trophy },
+    { href: '/settings', label: 'Settings', icon: Settings },
   ];
 
   const growthLinks = [
