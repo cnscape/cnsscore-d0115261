@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Loader2, ExternalLink } from 'lucide-react';
+import { Plus, Loader2, ExternalLink, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { SearchableClientSelect } from '@/components/deals/SearchableClientSelect';
@@ -30,6 +30,7 @@ interface Deal {
   client_share: number;
   cape_neto_share: number;
   rep_commission: number;
+  commission_percent: number;
   lead_name: string | null;
   lead_contact: string | null;
   lead_link: string | null;
@@ -72,6 +73,11 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
   const [filterClient, setFilterClient] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
 
+  // Edit commission dialog
+  const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
+  const [editCommissionPercent, setEditCommissionPercent] = useState(10);
+  const [editRevenue, setEditRevenue] = useState(0);
+
   // Form
   const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedOfferId, setSelectedOfferId] = useState('');
@@ -87,13 +93,11 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
 
   const fetchData = async () => {
     setIsLoading(true);
-
     const [clientsRes, offersRes, campaignsRes] = await Promise.all([
       supabase.from('clients').select('id, name, revenue_share_percent, requires_link').eq('is_active', true),
       supabase.from('offers').select('id, client_id, name, ticket_size, default_commission_percent').eq('is_active', true),
       supabase.from('campaigns').select('id, name').eq('is_active', true),
     ]);
-
     if (clientsRes.data) setClients(clientsRes.data as unknown as Client[]);
     if (offersRes.data) setOffers(offersRes.data as Offer[]);
     if (campaignsRes.data) setCampaigns(campaignsRes.data as Campaign[]);
@@ -102,14 +106,9 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
       .from('deals')
       .select('*, clients(name, requires_link), offers(name, ticket_size)')
       .order('created_at', { ascending: false });
-
-    if (!adminView && user) {
-      dealsQuery = dealsQuery.eq('rep_id', user.id);
-    }
-
+    if (!adminView && user) dealsQuery = dealsQuery.eq('rep_id', user.id);
     const { data: dealsData } = await dealsQuery;
     if (dealsData) setDeals(dealsData as unknown as Deal[]);
-
     setIsLoading(false);
   };
 
@@ -128,23 +127,15 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
     if (!selectedClientId) errors.client = 'Client is required';
     if (!selectedOfferId) errors.offer = 'Offer is required';
     if (!leadName.trim()) errors.leadName = 'Lead name is required';
-    
     const contactValidation = validateLeadContact(leadContact);
-    if (!contactValidation.valid) {
-      errors.leadContact = contactValidation.error || 'Invalid contact';
-    }
-
-    if (selectedClient?.requires_link && !leadLink.trim()) {
-      errors.leadLink = 'Lead link is required for this client';
-    }
-    
+    if (!contactValidation.valid) errors.leadContact = contactValidation.error || 'Invalid contact';
+    if (selectedClient?.requires_link && !leadLink.trim()) errors.leadLink = 'Lead link is required for this client';
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleAddDeal = async () => {
     if (!user || !validateForm()) return;
-
     setIsSubmitting(true);
     const client = clients.find(c => c.id === selectedClientId);
     const offer = offers.find(o => o.id === selectedOfferId);
@@ -154,14 +145,13 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
     const grossRevenue = revenue;
     const capeNetoShare = grossRevenue * (client.revenue_share_percent / 100);
     const clientShare = grossRevenue - capeNetoShare;
-    // Commission is auto-calculated by trigger (10% of revenue)
 
     const { error } = await supabase.from('deals').insert([{
       client_id: selectedClientId,
       offer_id: selectedOfferId,
       rep_id: user.id,
       channel: channel as any,
-      campaign: selectedCampaignId || null,
+      campaign: selectedCampaignId && selectedCampaignId !== 'none' ? selectedCampaignId : null,
       lead_name: leadName.trim(),
       lead_contact: leadContact.trim(),
       lead_link: leadLink.trim() || null,
@@ -170,68 +160,52 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
       gross_revenue: grossRevenue,
       client_share: clientShare,
       cape_neto_share: capeNetoShare,
-      rep_commission: 0, // Will be overridden by trigger
-    }]);
+      commission_percent: 10,
+      rep_commission: 0,
+    } as any]);
 
     setIsSubmitting(false);
-
-    if (error) {
-      toast.error('Failed to create deal: ' + error.message);
-      return;
-    }
-
+    if (error) { toast.error('Failed to create deal: ' + error.message); return; }
     toast.success('Deal created! 🎯');
-    setShowAddDeal(false);
-    resetForm();
-    fetchData();
+    setShowAddDeal(false); resetForm(); fetchData();
   };
 
   const handleStatusChange = async (dealId: string, newStatus: string) => {
-    const { error } = await supabase.from('deals').update({ 
-      status: newStatus as any,
-    }).eq('id', dealId);
-
-    if (error) {
-      toast.error('Failed to update status: ' + error.message);
-      return;
-    }
+    const { error } = await supabase.from('deals').update({ status: newStatus as any }).eq('id', dealId);
+    if (error) { toast.error('Failed to update status: ' + error.message); return; }
     toast.success(`Status updated to ${newStatus}`);
     fetchData();
+  };
+
+  const handleUpdateDeal = async () => {
+    if (!editingDeal) return;
+    const { error } = await supabase.from('deals').update({
+      commission_percent: editCommissionPercent,
+      revenue: editRevenue,
+      rep_commission: 0, // trigger will recalculate
+    } as any).eq('id', editingDeal.id);
+    if (error) { toast.error('Failed to update deal'); return; }
+    toast.success('Deal updated — commission recalculated');
+    setEditingDeal(null); fetchData();
   };
 
   const handleQuickCreateClient = async (
     name: string, industry: string, revenueModel: string, revenueSharePercent: number
   ): Promise<string | null> => {
     const { data, error } = await supabase.from('clients').insert([{
-      name,
-      industry: industry || null,
-      revenue_model: revenueModel as any,
-      revenue_share_percent: revenueSharePercent,
+      name, industry: industry || null, revenue_model: revenueModel as any, revenue_share_percent: revenueSharePercent,
     }]).select('id').single();
-
-    if (error) {
-      toast.error('Failed to create client: ' + error.message);
-      return null;
-    }
-
+    if (error) { toast.error('Failed to create client: ' + error.message); return null; }
     toast.success(`Client "${name}" created!`);
     const { data: refreshed } = await supabase.from('clients').select('id, name, revenue_share_percent, requires_link').eq('is_active', true);
     if (refreshed) setClients(refreshed as unknown as Client[]);
-    
     return data?.id || null;
   };
 
   const resetForm = () => {
-    setSelectedClientId('');
-    setSelectedOfferId('');
-    setSelectedCampaignId('');
-    setChannel('organic');
-    setLeadName('');
-    setLeadContact('');
-    setLeadLink('');
-    setDealRevenue('');
-    setDealNotes('');
-    setFormErrors({});
+    setSelectedClientId(''); setSelectedOfferId(''); setSelectedCampaignId('');
+    setChannel('organic'); setLeadName(''); setLeadContact(''); setLeadLink('');
+    setDealRevenue(''); setDealNotes(''); setFormErrors({});
   };
 
   const statusColors: Record<string, string> = {
@@ -242,19 +216,10 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
   };
 
   const clientOffers = offers.filter(o => o.client_id === selectedClientId);
-
-  const canEditDeal = (deal: Deal) => {
-    return user && (deal.rep_id === user.id || isAdmin);
-  };
+  const canEditDeal = (deal: Deal) => user && (deal.rep_id === user.id || isAdmin);
 
   if (isLoading) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center h-full">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </AppLayout>
-    );
+    return (<AppLayout><div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></AppLayout>);
   }
 
   return (
@@ -263,9 +228,7 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">{adminView ? 'All Deals' : 'My Deals'}</h1>
-            <p className="text-muted-foreground">
-              {adminView ? 'Overview of all deals across reps' : 'Track and manage your deals'}
-            </p>
+            <p className="text-muted-foreground">{adminView ? 'Overview of all deals across reps' : 'Track and manage your deals'}</p>
           </div>
           <div className="flex items-center gap-3">
             <Select value={filterClient} onValueChange={setFilterClient}>
@@ -286,13 +249,10 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
               </SelectContent>
             </Select>
             <Dialog open={showAddDeal} onOpenChange={(o) => { setShowAddDeal(o); if (!o) resetForm(); }}>
-              <DialogTrigger asChild>
-                <Button><Plus className="h-4 w-4 mr-2" /> New Deal</Button>
-              </DialogTrigger>
+              <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-2" /> New Deal</Button></DialogTrigger>
               <DialogContent className="max-w-lg">
                 <DialogHeader><DialogTitle>Create New Deal</DialogTitle></DialogHeader>
                 <div className="space-y-4 pt-4 max-h-[70vh] overflow-y-auto">
-                  {/* Client */}
                   <div className="space-y-2">
                     <Label>Client <span className="text-destructive">*</span></Label>
                     <SearchableClientSelect
@@ -305,41 +265,29 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
                     />
                     {formErrors.client && <p className="text-xs text-destructive">{formErrors.client}</p>}
                   </div>
-
-                  {/* Offer */}
                   {selectedClientId && (
                     <div className="space-y-2">
                       <Label>Offer <span className="text-destructive">*</span></Label>
                       <Select value={selectedOfferId} onValueChange={(v) => { setSelectedOfferId(v); setFormErrors(prev => ({ ...prev, offer: '' })); }}>
                         <SelectTrigger><SelectValue placeholder="Select offer" /></SelectTrigger>
                         <SelectContent>
-                          {clientOffers.map(o => (
-                            <SelectItem key={o.id} value={o.id}>{o.name} — R{o.ticket_size.toLocaleString()}</SelectItem>
-                          ))}
+                          {clientOffers.map(o => <SelectItem key={o.id} value={o.id}>{o.name} — R{o.ticket_size.toLocaleString()}</SelectItem>)}
                         </SelectContent>
                       </Select>
-                      {clientOffers.length === 0 && (
-                        <p className="text-xs text-muted-foreground">No offers for this client.</p>
-                      )}
+                      {clientOffers.length === 0 && <p className="text-xs text-muted-foreground">No offers for this client.</p>}
                       {formErrors.offer && <p className="text-xs text-destructive">{formErrors.offer}</p>}
                     </div>
                   )}
-
-                  {/* Campaign */}
                   <div className="space-y-2">
                     <Label>Campaign</Label>
                     <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
                       <SelectTrigger><SelectValue placeholder="Select campaign (optional)" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">No Campaign</SelectItem>
-                        {campaigns.map(c => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                        ))}
+                        {campaigns.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
-
-                  {/* Channel */}
                   <div className="space-y-2">
                     <Label>Channel</Label>
                     <Select value={channel} onValueChange={setChannel}>
@@ -355,64 +303,36 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
                       </SelectContent>
                     </Select>
                   </div>
-
-                  {/* Lead Name + Contact */}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label>Lead Name <span className="text-destructive">*</span></Label>
-                      <Input
-                        value={leadName}
-                        onChange={e => { setLeadName(e.target.value); setFormErrors(prev => ({ ...prev, leadName: '' })); }}
-                        placeholder="Contact name"
-                      />
+                      <Input value={leadName} onChange={e => { setLeadName(e.target.value); setFormErrors(prev => ({ ...prev, leadName: '' })); }} placeholder="Contact name" />
                       {formErrors.leadName && <p className="text-xs text-destructive">{formErrors.leadName}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label>Lead Contact <span className="text-destructive">*</span></Label>
-                      <LeadContactInput
-                        value={leadContact}
-                        onChange={(v) => { setLeadContact(v); setFormErrors(prev => ({ ...prev, leadContact: '' })); }}
-                        error={formErrors.leadContact}
-                      />
+                      <LeadContactInput value={leadContact} onChange={(v) => { setLeadContact(v); setFormErrors(prev => ({ ...prev, leadContact: '' })); }} error={formErrors.leadContact} />
                     </div>
                   </div>
-
-                  {/* Lead Link (conditional) */}
                   {selectedClient?.requires_link && (
                     <div className="space-y-2">
                       <Label>Lead Link <span className="text-destructive">*</span></Label>
-                      <Input
-                        type="url"
-                        value={leadLink}
-                        onChange={e => { setLeadLink(e.target.value); setFormErrors(prev => ({ ...prev, leadLink: '' })); }}
-                        placeholder="https://..."
-                      />
+                      <Input type="url" value={leadLink} onChange={e => { setLeadLink(e.target.value); setFormErrors(prev => ({ ...prev, leadLink: '' })); }} placeholder="https://..." />
                       {formErrors.leadLink && <p className="text-xs text-destructive">{formErrors.leadLink}</p>}
                     </div>
                   )}
-
-                  {/* Revenue override */}
                   <div className="space-y-2">
-                    <Label>Revenue (ZAR)</Label>
-                    <Input
-                      type="number"
-                      value={dealRevenue}
-                      onChange={e => setDealRevenue(e.target.value ? Number(e.target.value) : '')}
-                      placeholder={selectedOfferId ? `Default: R${clientOffers.find(o => o.id === selectedOfferId)?.ticket_size.toLocaleString() || '0'}` : 'Select offer first'}
-                    />
-                    <p className="text-xs text-muted-foreground">Commission auto-calculated at 10%</p>
+                    <Label>Revenue (ZAR) — optional for scouts</Label>
+                    <Input type="number" value={dealRevenue} onChange={e => setDealRevenue(e.target.value ? Number(e.target.value) : '')}
+                      placeholder={selectedOfferId ? `Default: R${clientOffers.find(o => o.id === selectedOfferId)?.ticket_size.toLocaleString() || '0'}` : 'Select offer first'} />
+                    <p className="text-xs text-muted-foreground">Leave blank to use default ticket size. Can be updated later.</p>
                   </div>
-
-                  {/* Notes */}
                   <div className="space-y-2">
                     <Label>Notes</Label>
                     <Textarea value={dealNotes} onChange={e => setDealNotes(e.target.value)} placeholder="Deal notes..." />
                   </div>
-
                   <Button onClick={handleAddDeal} className="w-full" disabled={isSubmitting}>
-                    {isSubmitting ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</>
-                    ) : 'Create Deal'}
+                    {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Creating...</> : 'Create Deal'}
                   </Button>
                 </div>
               </DialogContent>
@@ -422,38 +342,32 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
 
         {/* Summary cards */}
         <div className="grid gap-4 md:grid-cols-4">
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">Total Deals</p>
-              <p className="text-2xl font-bold">{filteredDeals.length}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">Total Revenue</p>
-              <p className="text-2xl font-bold text-primary">
-                R{filteredDeals.filter(d => d.status === 'won').reduce((s, d) => s + (d.revenue || 0), 0).toLocaleString()}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">CNS Share</p>
-              <p className="text-2xl font-bold">
-                R{filteredDeals.filter(d => d.status === 'won').reduce((s, d) => s + (d.cape_neto_share || 0), 0).toLocaleString()}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground">{adminView ? 'Total Commission' : 'My Commission'}</p>
-              <p className="text-2xl font-bold text-primary">
-                R{filteredDeals.filter(d => d.status === 'won').reduce((s, d) => s + (d.rep_commission || 0), 0).toLocaleString()}
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">10% of revenue</p>
-            </CardContent>
-          </Card>
+          <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Total Deals</p><p className="text-2xl font-bold">{filteredDeals.length}</p></CardContent></Card>
+          <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Total Revenue</p><p className="text-2xl font-bold text-primary">R{filteredDeals.filter(d => d.status === 'won').reduce((s, d) => s + (d.revenue || 0), 0).toLocaleString()}</p></CardContent></Card>
+          <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">CNS Share</p><p className="text-2xl font-bold">R{filteredDeals.filter(d => d.status === 'won').reduce((s, d) => s + (d.cape_neto_share || 0), 0).toLocaleString()}</p></CardContent></Card>
+          <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">{adminView ? 'Total Commission' : 'My Commission'}</p><p className="text-2xl font-bold text-primary">R{filteredDeals.filter(d => d.status === 'won').reduce((s, d) => s + (d.rep_commission || 0), 0).toLocaleString()}</p></CardContent></Card>
         </div>
+
+        {/* Edit Deal Dialog (admin commission % + revenue) */}
+        <Dialog open={!!editingDeal} onOpenChange={(o) => { if (!o) setEditingDeal(null); }}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Edit Deal — {editingDeal?.lead_name}</DialogTitle></DialogHeader>
+            <div className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>Revenue (ZAR)</Label>
+                <Input type="number" value={editRevenue} onChange={e => setEditRevenue(Number(e.target.value))} />
+              </div>
+              {isAdmin && (
+                <div className="space-y-2">
+                  <Label>Commission % (admin only)</Label>
+                  <Input type="number" value={editCommissionPercent} onChange={e => setEditCommissionPercent(Number(e.target.value))} min={0} max={100} />
+                  <p className="text-xs text-muted-foreground">New commission: R{((editRevenue * editCommissionPercent) / 100).toLocaleString()}</p>
+                </div>
+              )}
+              <Button onClick={handleUpdateDeal} className="w-full">Save Changes</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Deals table */}
         <div className="rounded-xl border border-border overflow-hidden">
@@ -468,6 +382,7 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
                 <TableHead className="text-right">Revenue</TableHead>
                 <TableHead className="text-right">Commission</TableHead>
                 <TableHead>Date</TableHead>
+                {(adminView || isAdmin) && <TableHead></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -476,9 +391,7 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
                   <TableCell>
                     <div>
                       <p className="font-medium">{deal.lead_name || '—'}</p>
-                      {deal.lead_contact && (
-                        <p className="text-xs text-muted-foreground">{deal.lead_contact}</p>
-                      )}
+                      {deal.lead_contact && <p className="text-xs text-muted-foreground">{deal.lead_contact}</p>}
                       {deal.lead_link && (
                         <a href={deal.lead_link} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline flex items-center gap-1">
                           <ExternalLink className="h-3 w-3" /> Link
@@ -492,9 +405,7 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
                   <TableCell className="text-center">
                     {canEditDeal(deal) ? (
                       <Select value={deal.status} onValueChange={(v) => handleStatusChange(deal.id, v)}>
-                        <SelectTrigger className="w-28 h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
+                        <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="open">Open</SelectItem>
                           <SelectItem value="won">Won</SelectItem>
@@ -503,24 +414,30 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
                         </SelectContent>
                       </Select>
                     ) : (
-                      <Badge className={statusColors[deal.status] || ''} variant="outline">
-                        {deal.status}
-                      </Badge>
+                      <Badge className={statusColors[deal.status] || ''} variant="outline">{deal.status}</Badge>
                     )}
                   </TableCell>
                   <TableCell className="text-right font-mono">R{(deal.revenue || 0).toLocaleString()}</TableCell>
-                  <TableCell className="text-right font-mono text-primary">R{(deal.rep_commission || 0).toLocaleString()}</TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {format(new Date(deal.created_at), 'dd MMM')}
+                  <TableCell className="text-right font-mono text-primary">
+                    R{(deal.rep_commission || 0).toLocaleString()}
+                    <span className="text-xs text-muted-foreground ml-1">({deal.commission_percent || 10}%)</span>
                   </TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{format(new Date(deal.created_at), 'dd MMM')}</TableCell>
+                  {(adminView || isAdmin) && (
+                    <TableCell>
+                      <Button variant="ghost" size="sm" onClick={() => {
+                        setEditingDeal(deal);
+                        setEditCommissionPercent(deal.commission_percent || 10);
+                        setEditRevenue(deal.revenue || 0);
+                      }}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
               {filteredDeals.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    No deals found. Create your first deal to get started!
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No deals found. Create your first deal to get started!</TableCell></TableRow>
               )}
             </TableBody>
           </Table>

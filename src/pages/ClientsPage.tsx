@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Briefcase, Loader2 } from 'lucide-react';
+import { Plus, Briefcase, Loader2, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Client {
@@ -44,6 +44,7 @@ export default function ClientsPage() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [showAddOffer, setShowAddOffer] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Form state
   const [clientName, setClientName] = useState('');
@@ -51,15 +52,16 @@ export default function ClientsPage() {
   const [revenueModel, setRevenueModel] = useState('revenue_share');
   const [revenueSharePercent, setRevenueSharePercent] = useState(30);
   const [flatCommission, setFlatCommission] = useState(0);
+  const [requiresLink, setRequiresLink] = useState(false);
 
-  // Offer form state
+  // Offer form
   const [offerName, setOfferName] = useState('');
   const [ticketSize, setTicketSize] = useState(0);
   const [offerCommission, setOfferCommission] = useState(10);
 
   const fetchClients = async () => {
     setIsLoading(true);
-    const { data } = await supabase.from('clients').select('*').order('created_at', { ascending: false });
+    const { data } = await supabase.from('clients').select('*').order('is_active', { ascending: false }).order('name');
     if (data) setClients(data as unknown as Client[]);
     setIsLoading(false);
   };
@@ -70,88 +72,96 @@ export default function ClientsPage() {
   };
 
   useEffect(() => { fetchClients(); }, []);
+  useEffect(() => { if (selectedClient) fetchOffers(selectedClient.id); }, [selectedClient]);
 
-  useEffect(() => {
-    if (selectedClient) fetchOffers(selectedClient.id);
-  }, [selectedClient]);
+  const resetForm = () => {
+    setClientName(''); setClientIndustry(''); setRevenueModel('revenue_share');
+    setRevenueSharePercent(30); setFlatCommission(0); setRequiresLink(false);
+  };
 
   const handleAddClient = async () => {
     const { error } = await supabase.from('clients').insert([{
-      name: clientName,
-      industry: clientIndustry || null,
-      revenue_model: revenueModel as 'revenue_share' | 'flat_commission' | 'tiered' | 'hybrid',
+      name: clientName, industry: clientIndustry || null,
+      revenue_model: revenueModel as any,
       revenue_share_percent: revenueSharePercent,
       flat_commission_amount: flatCommission,
+      requires_link: requiresLink,
     }]);
-
-    if (error) {
-      toast.error('Failed to add client');
-      return;
-    }
-
+    if (error) { toast.error('Failed to add client'); return; }
     toast.success('Client added!');
-    setShowAddClient(false);
-    setClientName('');
-    setClientIndustry('');
+    setShowAddClient(false); resetForm(); fetchClients();
+  };
+
+  const handleEditClient = async () => {
+    if (!selectedClient) return;
+    const { error } = await supabase.from('clients').update({
+      name: clientName, industry: clientIndustry || null,
+      revenue_model: revenueModel as any,
+      revenue_share_percent: revenueSharePercent,
+      flat_commission_amount: flatCommission,
+      requires_link: requiresLink,
+    } as any).eq('id', selectedClient.id);
+    if (error) { toast.error('Failed to update client'); return; }
+    toast.success('Client updated!');
+    setIsEditing(false);
+    // Refresh selected client
+    const { data } = await supabase.from('clients').select('*').eq('id', selectedClient.id).single();
+    if (data) setSelectedClient(data as unknown as Client);
     fetchClients();
+  };
+
+  const handleDeleteClient = async (clientId: string) => {
+    if (!confirm('Are you sure? This will deactivate the client and its related data.')) return;
+    const { error } = await supabase.from('clients').update({ is_active: false } as any).eq('id', clientId);
+    if (error) { toast.error('Failed to delete client: ' + error.message); return; }
+    toast.success('Client deactivated');
+    if (selectedClient?.id === clientId) setSelectedClient(null);
+    fetchClients();
+  };
+
+  const startEditing = () => {
+    if (!selectedClient) return;
+    setClientName(selectedClient.name);
+    setClientIndustry(selectedClient.industry || '');
+    setRevenueModel(selectedClient.revenue_model);
+    setRevenueSharePercent(selectedClient.revenue_share_percent);
+    setFlatCommission(selectedClient.flat_commission_amount);
+    setRequiresLink(selectedClient.requires_link);
+    setIsEditing(true);
   };
 
   const handleAddOffer = async () => {
     if (!selectedClient) return;
-
     const { error } = await supabase.from('offers').insert([{
-      client_id: selectedClient.id,
-      name: offerName,
-      ticket_size: ticketSize,
-      default_commission_percent: offerCommission,
+      client_id: selectedClient.id, name: offerName,
+      ticket_size: ticketSize, default_commission_percent: offerCommission,
     }]);
-
-    if (error) {
-      toast.error('Failed to add offer');
-      return;
-    }
-
+    if (error) { toast.error('Failed to add offer'); return; }
     toast.success('Offer added!');
-    setShowAddOffer(false);
-    setOfferName('');
-    setTicketSize(0);
+    setShowAddOffer(false); setOfferName(''); setTicketSize(0);
     fetchOffers(selectedClient.id);
   };
 
   const revenueModelLabels: Record<string, string> = {
-    revenue_share: 'Revenue Share',
-    flat_commission: 'Flat Commission',
-    tiered: 'Tiered',
-    hybrid: 'Hybrid',
+    revenue_share: 'Revenue Share', flat_commission: 'Flat Commission', tiered: 'Tiered', hybrid: 'Hybrid',
   };
 
   if (isLoading) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center h-full">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </AppLayout>
-    );
+    return (<AppLayout><div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></AppLayout>);
   }
 
   return (
     <AppLayout>
       <div className="p-6 lg:p-8 space-y-8">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Clients</h1>
             <p className="text-muted-foreground">Manage your client portfolio and revenue models</p>
           </div>
-          <Dialog open={showAddClient} onOpenChange={setShowAddClient}>
-            <DialogTrigger asChild>
-              <Button><Plus className="h-4 w-4 mr-2" /> Add Client</Button>
-            </DialogTrigger>
+          <Dialog open={showAddClient} onOpenChange={(o) => { setShowAddClient(o); if (!o) resetForm(); }}>
+            <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-2" /> Add Client</Button></DialogTrigger>
             <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New Client</DialogTitle>
-              </DialogHeader>
+              <DialogHeader><DialogTitle>Add New Client</DialogTitle></DialogHeader>
               <div className="space-y-4 pt-4">
                 <div className="space-y-2">
                   <Label>Client Name</Label>
@@ -174,23 +184,14 @@ export default function ClientsPage() {
                   </Select>
                 </div>
                 {(revenueModel === 'revenue_share' || revenueModel === 'hybrid') && (
-                  <div className="space-y-2">
-                    <Label>Revenue Share % (Cape Neto)</Label>
-                    <Input type="number" value={revenueSharePercent} onChange={e => setRevenueSharePercent(Number(e.target.value))} />
-                  </div>
+                  <div className="space-y-2"><Label>Revenue Share % (Cape Neto)</Label><Input type="number" value={revenueSharePercent} onChange={e => setRevenueSharePercent(Number(e.target.value))} /></div>
                 )}
                 {(revenueModel === 'flat_commission' || revenueModel === 'hybrid') && (
-                  <div className="space-y-2">
-                    <Label>Flat Commission Amount (ZAR)</Label>
-                    <Input type="number" value={flatCommission} onChange={e => setFlatCommission(Number(e.target.value))} />
-                  </div>
+                  <div className="space-y-2"><Label>Flat Commission Amount (ZAR)</Label><Input type="number" value={flatCommission} onChange={e => setFlatCommission(Number(e.target.value))} /></div>
                 )}
                 <div className="flex items-center justify-between py-2">
-                  <div>
-                    <Label>Requires Lead Link</Label>
-                    <p className="text-xs text-muted-foreground">Deals for this client will require a URL link</p>
-                  </div>
-                  <Switch />
+                  <div><Label>Requires Lead Link</Label><p className="text-xs text-muted-foreground">Deals for this client will require a URL link</p></div>
+                  <Switch checked={requiresLink} onCheckedChange={setRequiresLink} />
                 </div>
                 <Button onClick={handleAddClient} className="w-full" disabled={!clientName}>Add Client</Button>
               </div>
@@ -202,35 +203,23 @@ export default function ClientsPage() {
           {/* Client List */}
           <div className="lg:col-span-1 space-y-3">
             {clients.map(client => (
-              <Card
-                key={client.id}
-                className={`cursor-pointer card-hover ${selectedClient?.id === client.id ? 'border-primary' : ''}`}
-                onClick={() => setSelectedClient(client)}
-              >
+              <Card key={client.id} className={`cursor-pointer card-hover ${selectedClient?.id === client.id ? 'border-primary' : ''} ${!client.is_active ? 'opacity-50' : ''}`} onClick={() => setSelectedClient(client)}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/15 text-primary">
-                        <Briefcase className="h-5 w-5" />
-                      </div>
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/15 text-primary"><Briefcase className="h-5 w-5" /></div>
                       <div>
                         <p className="font-semibold">{client.name}</p>
                         <p className="text-xs text-muted-foreground">{client.industry || 'No industry'}</p>
                       </div>
                     </div>
-                    <Badge variant="outline" className="text-xs">
-                      {revenueModelLabels[client.revenue_model] || client.revenue_model}
-                    </Badge>
+                    <Badge variant="outline" className="text-xs">{revenueModelLabels[client.revenue_model] || client.revenue_model}</Badge>
                   </div>
                 </CardContent>
               </Card>
             ))}
             {clients.length === 0 && (
-              <Card>
-                <CardContent className="p-8 text-center text-muted-foreground">
-                  No clients yet. Add your first client to get started.
-                </CardContent>
-              </Card>
+              <Card><CardContent className="p-8 text-center text-muted-foreground">No clients yet. Add your first client to get started.</CardContent></Card>
             )}
           </div>
 
@@ -238,31 +227,56 @@ export default function ClientsPage() {
           <div className="lg:col-span-2">
             {selectedClient ? (
               <div className="space-y-6">
+                {/* Edit Dialog */}
+                <Dialog open={isEditing} onOpenChange={setIsEditing}>
+                  <DialogContent>
+                    <DialogHeader><DialogTitle>Edit {selectedClient.name}</DialogTitle></DialogHeader>
+                    <div className="space-y-4 pt-4">
+                      <div className="space-y-2"><Label>Client Name</Label><Input value={clientName} onChange={e => setClientName(e.target.value)} /></div>
+                      <div className="space-y-2"><Label>Industry</Label><Input value={clientIndustry} onChange={e => setClientIndustry(e.target.value)} /></div>
+                      <div className="space-y-2">
+                        <Label>Revenue Model</Label>
+                        <Select value={revenueModel} onValueChange={setRevenueModel}><SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="revenue_share">Revenue Share %</SelectItem>
+                            <SelectItem value="flat_commission">Flat Commission</SelectItem>
+                            <SelectItem value="tiered">Tiered</SelectItem>
+                            <SelectItem value="hybrid">Hybrid</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      {(revenueModel === 'revenue_share' || revenueModel === 'hybrid') && (
+                        <div className="space-y-2"><Label>Revenue Share %</Label><Input type="number" value={revenueSharePercent} onChange={e => setRevenueSharePercent(Number(e.target.value))} /></div>
+                      )}
+                      {(revenueModel === 'flat_commission' || revenueModel === 'hybrid') && (
+                        <div className="space-y-2"><Label>Flat Commission (ZAR)</Label><Input type="number" value={flatCommission} onChange={e => setFlatCommission(Number(e.target.value))} /></div>
+                      )}
+                      <div className="flex items-center justify-between py-2">
+                        <div><Label>Requires Lead Link</Label></div>
+                        <Switch checked={requiresLink} onCheckedChange={setRequiresLink} />
+                      </div>
+                      <Button onClick={handleEditClient} className="w-full">Save Changes</Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
                 <Card>
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <CardTitle>{selectedClient.name}</CardTitle>
-                      <Badge>{selectedClient.is_active ? 'Active' : 'Inactive'}</Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge>{selectedClient.is_active ? 'Active' : 'Inactive'}</Badge>
+                        <Button variant="outline" size="sm" onClick={startEditing}><Pencil className="h-4 w-4 mr-1" />Edit</Button>
+                        <Button variant="outline" size="sm" className="text-destructive" onClick={() => handleDeleteClient(selectedClient.id)}><Trash2 className="h-4 w-4 mr-1" />Delete</Button>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Revenue Model</p>
-                        <p className="font-medium">{revenueModelLabels[selectedClient.revenue_model]}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Cape Neto Share</p>
-                        <p className="font-medium text-primary">{selectedClient.revenue_share_percent}%</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Industry</p>
-                        <p className="font-medium">{selectedClient.industry || '—'}</p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Start Date</p>
-                        <p className="font-medium">{selectedClient.start_date}</p>
-                      </div>
+                      <div><p className="text-xs text-muted-foreground">Revenue Model</p><p className="font-medium">{revenueModelLabels[selectedClient.revenue_model]}</p></div>
+                      <div><p className="text-xs text-muted-foreground">Cape Neto Share</p><p className="font-medium text-primary">{selectedClient.revenue_share_percent}%</p></div>
+                      <div><p className="text-xs text-muted-foreground">Industry</p><p className="font-medium">{selectedClient.industry || '—'}</p></div>
+                      <div><p className="text-xs text-muted-foreground">Requires Link</p><p className="font-medium">{selectedClient.requires_link ? 'Yes' : 'No'}</p></div>
                     </div>
                   </CardContent>
                 </Card>
@@ -273,26 +287,13 @@ export default function ClientsPage() {
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-lg">Offers</CardTitle>
                       <Dialog open={showAddOffer} onOpenChange={setShowAddOffer}>
-                        <DialogTrigger asChild>
-                          <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Add Offer</Button>
-                        </DialogTrigger>
+                        <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" /> Add Offer</Button></DialogTrigger>
                         <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Add Offer to {selectedClient.name}</DialogTitle>
-                          </DialogHeader>
+                          <DialogHeader><DialogTitle>Add Offer to {selectedClient.name}</DialogTitle></DialogHeader>
                           <div className="space-y-4 pt-4">
-                            <div className="space-y-2">
-                              <Label>Offer Name</Label>
-                              <Input value={offerName} onChange={e => setOfferName(e.target.value)} placeholder="e.g. Premium Package" />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Ticket Size (ZAR)</Label>
-                              <Input type="number" value={ticketSize} onChange={e => setTicketSize(Number(e.target.value))} />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Default Commission %</Label>
-                              <Input type="number" value={offerCommission} onChange={e => setOfferCommission(Number(e.target.value))} />
-                            </div>
+                            <div className="space-y-2"><Label>Offer Name</Label><Input value={offerName} onChange={e => setOfferName(e.target.value)} placeholder="e.g. Premium Package" /></div>
+                            <div className="space-y-2"><Label>Ticket Size (ZAR)</Label><Input type="number" value={ticketSize} onChange={e => setTicketSize(Number(e.target.value))} /></div>
+                            <div className="space-y-2"><Label>Default Commission %</Label><Input type="number" value={offerCommission} onChange={e => setOfferCommission(Number(e.target.value))} /></div>
                             <Button onClick={handleAddOffer} className="w-full" disabled={!offerName}>Add Offer</Button>
                           </div>
                         </DialogContent>
@@ -302,25 +303,14 @@ export default function ClientsPage() {
                   <CardContent>
                     {offers.length > 0 ? (
                       <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Offer</TableHead>
-                            <TableHead className="text-right">Ticket Size</TableHead>
-                            <TableHead className="text-right">Commission</TableHead>
-                            <TableHead className="text-center">Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
+                        <TableHeader><TableRow><TableHead>Offer</TableHead><TableHead className="text-right">Ticket Size</TableHead><TableHead className="text-right">Commission</TableHead><TableHead className="text-center">Status</TableHead></TableRow></TableHeader>
                         <TableBody>
                           {offers.map(offer => (
                             <TableRow key={offer.id}>
                               <TableCell className="font-medium">{offer.name}</TableCell>
                               <TableCell className="text-right font-mono">R{offer.ticket_size.toLocaleString()}</TableCell>
                               <TableCell className="text-right font-mono">{offer.default_commission_percent}%</TableCell>
-                              <TableCell className="text-center">
-                                <Badge variant={offer.is_active ? 'default' : 'secondary'}>
-                                  {offer.is_active ? 'Active' : 'Inactive'}
-                                </Badge>
-                              </TableCell>
+                              <TableCell className="text-center"><Badge variant={offer.is_active ? 'default' : 'secondary'}>{offer.is_active ? 'Active' : 'Inactive'}</Badge></TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -332,12 +322,7 @@ export default function ClientsPage() {
                 </Card>
               </div>
             ) : (
-              <Card>
-                <CardContent className="p-12 text-center text-muted-foreground">
-                  <Briefcase className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                  <p>Select a client to view details and manage offers</p>
-                </CardContent>
-              </Card>
+              <Card><CardContent className="p-12 text-center text-muted-foreground"><Briefcase className="h-12 w-12 mx-auto mb-4 opacity-30" /><p>Select a client to view details and manage offers</p></CardContent></Card>
             )}
           </div>
         </div>

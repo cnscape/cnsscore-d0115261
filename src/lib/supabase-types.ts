@@ -1,4 +1,4 @@
-export type AppRole = 'admin' | 'sales_rep' | 'team_lead';
+export type AppRole = 'admin' | 'sales_rep' | 'team_lead' | 'scout';
 
 export type RAGStatus = 'green' | 'amber' | 'red';
 
@@ -7,6 +7,10 @@ export interface Profile {
   user_id: string;
   full_name: string;
   avatar_url: string | null;
+  phone: string | null;
+  city: string | null;
+  province: string | null;
+  country: string | null;
   is_active: boolean;
   current_streak: number;
   longest_streak: number;
@@ -22,6 +26,8 @@ export interface Campaign {
   description: string | null;
   color: string;
   is_active: boolean;
+  client_id: string | null;
+  paused_at: string | null;
   created_at: string;
   updated_at: string;
 }

@@ -20,51 +20,33 @@ import DealsPage from "./pages/DealsPage";
 import DailyUpdatePage from "./pages/DailyUpdatePage";
 import ProjectsPage from "./pages/ProjectsPage";
 import SettingsPage from "./pages/SettingsPage";
+import MyCommissionPage from "./pages/MyCommissionPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
   const { user, isAdmin, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
+  if (isLoading) return <div className="flex min-h-screen items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
   if (!user) return <Navigate to="/auth" replace />;
   if (adminOnly && !isAdmin) return <Navigate to="/dashboard" replace />;
-
   return <>{children}</>;
 }
 
 function AppRoutes() {
   const { user, isAdmin, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
+  if (isLoading) return <div className="flex min-h-screen items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return (
     <Routes>
       <Route path="/auth" element={<AuthPage />} />
-      
-      <Route 
-        path="/" 
-        element={user ? <Navigate to={isAdmin ? "/admin" : "/dashboard"} replace /> : <Navigate to="/auth" replace />} 
-      />
+      <Route path="/" element={user ? <Navigate to={isAdmin ? "/admin" : "/dashboard"} replace /> : <Navigate to="/auth" replace />} />
       
       {/* Shared routes */}
       <Route path="/dashboard" element={<ProtectedRoute><RepDashboard /></ProtectedRoute>} />
       <Route path="/scorecard" element={<ProtectedRoute><ScorecardPage /></ProtectedRoute>} />
       <Route path="/deals" element={<ProtectedRoute><DealsPage /></ProtectedRoute>} />
+      <Route path="/my-commission" element={<ProtectedRoute><MyCommissionPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
       <Route path="/achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />
@@ -79,9 +61,6 @@ function AppRoutes() {
       <Route path="/admin/deals" element={<ProtectedRoute adminOnly><DealsPage adminView /></ProtectedRoute>} />
       <Route path="/admin/campaigns" element={<ProtectedRoute adminOnly><CampaignsPage /></ProtectedRoute>} />
       <Route path="/admin/team" element={<ProtectedRoute adminOnly><TeamPage /></ProtectedRoute>} />
-      <Route path="/admin/commissions" element={<ProtectedRoute adminOnly>
-        <div className="p-8"><h1 className="text-3xl font-bold">Commissions</h1><p className="text-muted-foreground mt-2">Commission engine — coming soon...</p></div>
-      </ProtectedRoute>} />
       <Route path="/admin/funnel" element={<ProtectedRoute adminOnly>
         <div className="p-8"><h1 className="text-3xl font-bold">Funnel Analytics</h1><p className="text-muted-foreground mt-2">Funnel diagnostics — coming soon...</p></div>
       </ProtectedRoute>} />
