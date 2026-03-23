@@ -94,7 +94,7 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
       supabase.from('campaigns').select('id, name').eq('is_active', true),
     ]);
 
-    if (clientsRes.data) setClients(clientsRes.data as Client[]);
+    if (clientsRes.data) setClients(clientsRes.data as unknown as Client[]);
     if (offersRes.data) setOffers(offersRes.data as Offer[]);
     if (campaignsRes.data) setCampaigns(campaignsRes.data as Campaign[]);
 
