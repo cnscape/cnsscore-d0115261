@@ -97,33 +97,47 @@ export type Database = {
       }
       campaigns: {
         Row: {
+          client_id: string | null
           color: string | null
           created_at: string | null
           description: string | null
           id: string
           is_active: boolean | null
           name: string
+          paused_at: string | null
           updated_at: string | null
         }
         Insert: {
+          client_id?: string | null
           color?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
           name: string
+          paused_at?: string | null
           updated_at?: string | null
         }
         Update: {
+          client_id?: string | null
           color?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
+          paused_at?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       clients: {
         Row: {
@@ -267,6 +281,7 @@ export type Database = {
           client_id: string
           client_share: number | null
           closed_at: string | null
+          commission_percent: number | null
           created_at: string | null
           gross_revenue: number | null
           id: string
@@ -291,6 +306,7 @@ export type Database = {
           client_id: string
           client_share?: number | null
           closed_at?: string | null
+          commission_percent?: number | null
           created_at?: string | null
           gross_revenue?: number | null
           id?: string
@@ -315,6 +331,7 @@ export type Database = {
           client_id?: string
           client_share?: number | null
           closed_at?: string | null
+          commission_percent?: number | null
           created_at?: string | null
           gross_revenue?: number | null
           id?: string
@@ -436,6 +453,41 @@ export type Database = {
           },
         ]
       }
+      lead_activities: {
+        Row: {
+          activity_type: string
+          created_at: string | null
+          description: string | null
+          id: string
+          lead_id: string
+          user_id: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          lead_id: string
+          user_id: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          lead_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_activities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "pipeline_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lost_reasons: {
         Row: {
           created_at: string | null
@@ -532,6 +584,98 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pipeline_leads: {
+        Row: {
+          call_outcome: string | null
+          created_at: string | null
+          deal_id: string | null
+          follow_ups_completed: number | null
+          id: string
+          last_activity_at: string | null
+          lead_contact: string | null
+          lead_name: string
+          lead_score: string | null
+          max_follow_ups: number | null
+          notes: string | null
+          owner_id: string
+          platform: string | null
+          stage: string
+          updated_at: string | null
+        }
+        Insert: {
+          call_outcome?: string | null
+          created_at?: string | null
+          deal_id?: string | null
+          follow_ups_completed?: number | null
+          id?: string
+          last_activity_at?: string | null
+          lead_contact?: string | null
+          lead_name: string
+          lead_score?: string | null
+          max_follow_ups?: number | null
+          notes?: string | null
+          owner_id: string
+          platform?: string | null
+          stage?: string
+          updated_at?: string | null
+        }
+        Update: {
+          call_outcome?: string | null
+          created_at?: string | null
+          deal_id?: string | null
+          follow_ups_completed?: number | null
+          id?: string
+          last_activity_at?: string | null
+          lead_contact?: string | null
+          lead_name?: string
+          lead_score?: string | null
+          max_follow_ups?: number | null
+          notes?: string | null
+          owner_id?: string
+          platform?: string | null
+          stage?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipeline_leads_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      playbook_sections: {
+        Row: {
+          category: string
+          content: string
+          created_at: string | null
+          id: string
+          sort_order: number | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string
+          content: string
+          created_at?: string | null
+          id?: string
+          sort_order?: number | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          sort_order?: number | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -719,6 +863,42 @@ export type Database = {
           },
         ]
       }
+      training_resources: {
+        Row: {
+          category: string
+          content_type: string
+          content_url: string
+          created_at: string | null
+          description: string | null
+          id: string
+          sort_order: number | null
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string
+          content_type?: string
+          content_url: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          sort_order?: number | null
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          content_type?: string
+          content_url?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          sort_order?: number | null
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       user_achievements: {
         Row: {
           achievement_id: string
@@ -781,7 +961,7 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "sales_rep" | "team_lead"
+      app_role: "admin" | "sales_rep" | "team_lead" | "scout"
       deal_channel:
         | "organic"
         | "paid"
@@ -923,7 +1103,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "sales_rep", "team_lead"],
+      app_role: ["admin", "sales_rep", "team_lead", "scout"],
       deal_channel: [
         "organic",
         "paid",

@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, ClipboardList, History, Trophy, Settings, Users, Target,
   LogOut, ChevronLeft, ChevronRight, Briefcase, TrendingUp, DollarSign, 
-  FileText, FolderKanban, Send
+  FileText, FolderKanban, Send, Kanban, BookOpen, GraduationCap, UserPlus
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,6 +10,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { XPProgress } from '@/components/ui/xp-progress';
 import { StreakBadge } from '@/components/ui/streak-badge';
+import { Separator } from '@/components/ui/separator';
 
 export function Sidebar() {
   const location = useLocation();
@@ -18,22 +19,27 @@ export function Sidebar() {
 
   const isGrowthTeam = roles.includes('growth_team' as any);
   const isScout = roles.includes('scout' as any);
-  const isSalesRep = roles.includes('sales_rep');
 
   const salesLinks = [
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/daily-work', label: 'Daily Work', icon: LayoutDashboard },
+    { href: '/crm', label: 'CRM Pipeline', icon: Kanban },
     { href: '/scorecard', label: "Today's Scorecard", icon: ClipboardList },
     { href: '/deals', label: 'My Deals', icon: Briefcase },
     { href: '/my-commission', label: 'My Commission', icon: DollarSign },
+    { href: '/playbook', label: 'Playbook', icon: BookOpen },
+    { href: '/training', label: 'Training & SOPs', icon: GraduationCap },
     { href: '/history', label: 'My History', icon: History },
     { href: '/achievements', label: 'Achievements', icon: Trophy },
     { href: '/settings', label: 'Settings', icon: Settings },
   ];
 
   const scoutLinks = [
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/daily-work', label: 'Daily Work', icon: LayoutDashboard },
+    { href: '/crm', label: 'CRM Pipeline', icon: Kanban },
     { href: '/deals', label: 'My Deals', icon: Briefcase },
     { href: '/my-commission', label: 'My Commission', icon: DollarSign },
+    { href: '/playbook', label: 'Playbook', icon: BookOpen },
+    { href: '/training', label: 'Training & SOPs', icon: GraduationCap },
     { href: '/achievements', label: 'Achievements', icon: Trophy },
     { href: '/settings', label: 'Settings', icon: Settings },
   ];
@@ -42,20 +48,27 @@ export function Sidebar() {
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/daily-update', label: 'Daily Update', icon: Send },
     { href: '/projects', label: 'My Projects', icon: FolderKanban },
+    { href: '/playbook', label: 'Playbook', icon: BookOpen },
+    { href: '/training', label: 'Training & SOPs', icon: GraduationCap },
     { href: '/achievements', label: 'Achievements', icon: Trophy },
   ];
 
-  const adminLinks = [
+  const adminMainLinks = [
     { href: '/admin', label: 'Command Center', icon: LayoutDashboard },
-    { href: '/admin/clients', label: 'Clients & Offers', icon: Briefcase },
+    { href: '/admin/leads', label: 'Lead Distribution', icon: UserPlus },
     { href: '/admin/deals', label: 'All Deals', icon: FileText },
     { href: '/admin/campaigns', label: 'Campaigns', icon: Target },
+    { href: '/admin/clients', label: 'Clients & Offers', icon: Briefcase },
     { href: '/admin/team', label: 'Team', icon: Users },
-    { href: '/admin/funnel', label: 'Funnel Analytics', icon: TrendingUp },
+  ];
+
+  const adminToolLinks = [
+    { href: '/admin/playbook', label: 'Playbook', icon: BookOpen },
+    { href: '/admin/training', label: 'Training & SOPs', icon: GraduationCap },
     { href: '/admin/settings', label: 'Settings', icon: Settings },
   ];
 
-  const links = isAdmin ? adminLinks : isGrowthTeam ? growthLinks : isScout ? scoutLinks : salesLinks;
+  const links = isAdmin ? adminMainLinks : isGrowthTeam ? growthLinks : isScout ? scoutLinks : salesLinks;
   const roleLabel = isAdmin ? 'Admin' : isGrowthTeam ? 'Growth Team' : isScout ? 'Scout' : 'Sales Rep';
 
   return (
@@ -100,6 +113,30 @@ export function Sidebar() {
             );
           })}
         </ul>
+
+        {/* Admin extra section */}
+        {isAdmin && (
+          <>
+            {!collapsed && <Separator className="my-3" />}
+            <ul className="space-y-1">
+              {adminToolLinks.map(link => {
+                const Icon = link.icon;
+                const isActive = location.pathname === link.href;
+                return (
+                  <li key={link.href}>
+                    <Link to={link.href} className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                      isActive ? "bg-primary/15 text-primary border-l-2 border-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}>
+                      <Icon className="h-5 w-5 flex-shrink-0" />
+                      {!collapsed && <span>{link.label}</span>}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )}
       </nav>
 
       <div className="border-t border-border p-4">
