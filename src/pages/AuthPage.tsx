@@ -167,7 +167,6 @@ function SignUpForm({ isSubmitting, setIsSubmitting }: { isSubmitting: boolean; 
 
   const teamOptions = [
     { value: 'sales', label: 'Growth Sales Team', description: 'Sales reps — KPIs, deals, commissions', icon: Briefcase },
-    { value: 'growth', label: 'Growth Team', description: 'Interns & projects — daily updates, tasks', icon: Users },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
