@@ -97,33 +97,47 @@ export type Database = {
       }
       campaigns: {
         Row: {
+          client_id: string | null
           color: string | null
           created_at: string | null
           description: string | null
           id: string
           is_active: boolean | null
           name: string
+          paused_at: string | null
           updated_at: string | null
         }
         Insert: {
+          client_id?: string | null
           color?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
           name: string
+          paused_at?: string | null
           updated_at?: string | null
         }
         Update: {
+          client_id?: string | null
           color?: string | null
           created_at?: string | null
           description?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
+          paused_at?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       clients: {
         Row: {
@@ -267,6 +281,7 @@ export type Database = {
           client_id: string
           client_share: number | null
           closed_at: string | null
+          commission_percent: number | null
           created_at: string | null
           gross_revenue: number | null
           id: string
@@ -291,6 +306,7 @@ export type Database = {
           client_id: string
           client_share?: number | null
           closed_at?: string | null
+          commission_percent?: number | null
           created_at?: string | null
           gross_revenue?: number | null
           id?: string
@@ -315,6 +331,7 @@ export type Database = {
           client_id?: string
           client_share?: number | null
           closed_at?: string | null
+          commission_percent?: number | null
           created_at?: string | null
           gross_revenue?: number | null
           id?: string
@@ -781,7 +798,7 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "sales_rep" | "team_lead"
+      app_role: "admin" | "sales_rep" | "team_lead" | "scout"
       deal_channel:
         | "organic"
         | "paid"
@@ -923,7 +940,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "sales_rep", "team_lead"],
+      app_role: ["admin", "sales_rep", "team_lead", "scout"],
       deal_channel: [
         "organic",
         "paid",
