@@ -61,6 +61,7 @@ export function Sidebar() {
     { href: '/admin/campaigns', label: 'Campaigns', icon: Target },
     { href: '/admin/clients', label: 'Clients & Offers', icon: Briefcase },
     { href: '/admin/team', label: 'Team', icon: Users },
+    { href: '/admin/calendars', label: 'Booking System', icon: CalendarDays },
   ];
 
   const adminToolLinks = [
