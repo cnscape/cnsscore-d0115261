@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Save, User } from 'lucide-react';
+import { Loader2, Save, User, Upload, Image } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ProfileData {
@@ -25,9 +25,14 @@ const SA_PROVINCES = [
 ];
 
 export default function SettingsPage() {
-  const { user, profile, roles } = useAuth();
+  const { user, profile, roles, isAdmin } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+  const [logoUrl, setLogoUrl] = useState('');
   const [formData, setFormData] = useState<ProfileData>({
     full_name: '',
     phone: '',
@@ -42,14 +47,13 @@ export default function SettingsPage() {
     
     const fetchProfile = async () => {
       setIsLoading(true);
-      const { data } = await supabase
-        .from('profiles')
-        .select('full_name, phone, city, province, country, avatar_url')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      const [profileRes, logoRes] = await Promise.all([
+        supabase.from('profiles').select('full_name, phone, city, province, country, avatar_url').eq('user_id', user.id).maybeSingle(),
+        supabase.from('app_settings' as any).select('value').eq('key', 'logo_url').maybeSingle(),
+      ]);
       
-      if (data) {
-        const d = data as any;
+      if (profileRes.data) {
+        const d = profileRes.data as any;
         setFormData({
           full_name: d.full_name || '',
           phone: d.phone || '',
@@ -59,11 +63,62 @@ export default function SettingsPage() {
           avatar_url: d.avatar_url || '',
         });
       }
+      if (logoRes.data) {
+        setLogoUrl((logoRes.data as any).value || '');
+      }
       setIsLoading(false);
     };
     
     fetchProfile();
   }, [user]);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    
+    setIsUploading(true);
+    const fileExt = file.name.split('.').pop();
+    const filePath = `avatars/${user.id}.${fileExt}`;
+    
+    const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, { upsert: true });
+    if (uploadError) {
+      toast.error('Upload failed: ' + uploadError.message);
+      setIsUploading(false);
+      return;
+    }
+    
+    const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+    const url = urlData.publicUrl + '?t=' + Date.now();
+    setFormData(prev => ({ ...prev, avatar_url: url }));
+    
+    await supabase.from('profiles').update({ avatar_url: url } as any).eq('user_id', user.id);
+    toast.success('Profile picture uploaded!');
+    setIsUploading(false);
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setIsUploadingLogo(true);
+    const fileExt = file.name.split('.').pop();
+    const filePath = `logos/app-logo.${fileExt}`;
+    
+    const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, { upsert: true });
+    if (uploadError) {
+      toast.error('Logo upload failed: ' + uploadError.message);
+      setIsUploadingLogo(false);
+      return;
+    }
+    
+    const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+    const url = urlData.publicUrl + '?t=' + Date.now();
+    
+    await (supabase as any).from('app_settings').upsert({ key: 'logo_url', value: url, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+    setLogoUrl(url);
+    toast.success('App logo updated!');
+    setIsUploadingLogo(false);
+  };
 
   const handleSave = async () => {
     if (!user) return;
@@ -90,7 +145,7 @@ export default function SettingsPage() {
     }
   };
 
-  const roleLabel = roles.includes('admin') ? 'Admin' : roles.includes('team_lead') ? 'Team Lead' : 'Sales Rep';
+  const roleLabel = roles.includes('admin') ? 'Admin' : roles.includes('team_lead') ? 'Team Lead' : roles.includes('scout') ? 'Scout' : 'Sales Rep';
 
   if (isLoading) {
     return (
@@ -118,6 +173,27 @@ export default function SettingsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Profile Picture Upload */}
+            <div className="space-y-2">
+              <Label>Profile Picture</Label>
+              <div className="flex items-center gap-4">
+                {formData.avatar_url ? (
+                  <img src={formData.avatar_url} alt="Avatar" className="h-16 w-16 rounded-full object-cover border-2 border-border" />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/20 text-primary text-xl font-bold">
+                    {formData.full_name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div>
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+                  <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploading}>
+                    {isUploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                    {isUploading ? 'Uploading...' : 'Upload Photo'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+
             {/* Name */}
             <div className="space-y-2">
               <Label>Full Name</Label>
@@ -184,17 +260,6 @@ export default function SettingsPage() {
               />
             </div>
 
-            {/* Avatar URL */}
-            <div className="space-y-2">
-              <Label>Profile Picture URL</Label>
-              <Input
-                type="url"
-                value={formData.avatar_url}
-                onChange={e => setFormData(prev => ({ ...prev, avatar_url: e.target.value }))}
-                placeholder="https://..."
-              />
-            </div>
-
             <Button onClick={handleSave} disabled={isSaving || !formData.full_name.trim()} className="w-full">
               {isSaving ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
@@ -204,6 +269,35 @@ export default function SettingsPage() {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Admin Logo Control */}
+        {isAdmin && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Image className="h-5 w-5" />
+                App Logo (Admin)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">Upload a logo that appears across the sidebar, header, and login page.</p>
+              <div className="flex items-center gap-4">
+                {logoUrl ? (
+                  <img src={logoUrl} alt="App Logo" className="h-12 w-12 rounded-lg object-contain border border-border" />
+                ) : (
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">NH</div>
+                )}
+                <div>
+                  <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoUpload} />
+                  <Button variant="outline" size="sm" onClick={() => logoInputRef.current?.click()} disabled={isUploadingLogo}>
+                    {isUploadingLogo ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
+                    {isUploadingLogo ? 'Uploading...' : logoUrl ? 'Replace Logo' : 'Upload Logo'}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </AppLayout>
   );

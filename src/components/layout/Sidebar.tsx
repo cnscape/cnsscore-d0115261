@@ -81,8 +81,8 @@ export function Sidebar() {
       <div className="flex h-16 items-center justify-between border-b border-border px-4">
         {!collapsed && (
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-xs">CNS</div>
-            <span className="font-semibold text-foreground">Cape Neto</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-xs">NH</div>
+            <span className="font-semibold text-foreground">NetoHub</span>
           </div>
         )}
         <Button variant="ghost" size="icon" onClick={() => setCollapsed(!collapsed)} className="h-8 w-8">
@@ -144,9 +144,13 @@ export function Sidebar() {
       <div className="border-t border-border p-4">
         {!collapsed && profile && (
           <div className="mb-3 flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary text-sm font-bold">
-              {profile.full_name.charAt(0).toUpperCase()}
-            </div>
+            {profile.avatar_url ? (
+              <img src={profile.avatar_url} alt="" className="h-8 w-8 rounded-full object-cover" />
+            ) : (
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-primary text-sm font-bold">
+                {profile.full_name.charAt(0).toUpperCase()}
+              </div>
+            )}
             <div className="flex-1 truncate">
               <p className="text-sm font-medium truncate">{profile.full_name}</p>
               <p className="text-xs text-muted-foreground">{roleLabel}</p>

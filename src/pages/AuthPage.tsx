@@ -38,9 +38,9 @@ export default function AuthPage() {
         <div className="relative z-10 max-w-md">
           <div className="flex items-center gap-3 mb-8">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground text-xl font-bold">
-              CN
+              NH
             </div>
-            <span className="text-2xl font-bold">Cape Neto Solutions</span>
+            <span className="text-2xl font-bold">NetoHub</span>
           </div>
           
           <h1 className="text-4xl font-bold mb-4 gradient-text">
@@ -92,9 +92,9 @@ export default function AuthPage() {
           <CardHeader className="text-center">
             <div className="flex lg:hidden items-center justify-center gap-2 mb-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
-                CN
+                NH
               </div>
-              <span className="text-xl font-bold">Cape Neto</span>
+              <span className="text-xl font-bold">NetoHub</span>
             </div>
             <CardTitle className="text-2xl">Welcome</CardTitle>
             <CardDescription>Sign in to your account or create a new one</CardDescription>

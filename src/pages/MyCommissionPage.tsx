@@ -7,8 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { StatCard } from '@/components/ui/stat-card';
 import { StreakBadge } from '@/components/ui/streak-badge';
 import { XPProgress } from '@/components/ui/xp-progress';
-import { Loader2, DollarSign, Briefcase, Users, Trophy } from 'lucide-react';
+import { Loader2, DollarSign, Briefcase, Users, Trophy, Flame, Star } from 'lucide-react';
 import { format } from 'date-fns';
+import { Achievement, UserAchievement } from '@/lib/supabase-types';
 
 interface DealRow {
   id: string;
@@ -26,18 +27,22 @@ interface DealRow {
 export default function MyCommissionPage() {
   const { user, profile } = useAuth();
   const [deals, setDeals] = useState<DealRow[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
     const fetchData = async () => {
       setIsLoading(true);
-      const { data } = await supabase
-        .from('deals')
-        .select('id, status, revenue, rep_commission, commission_percent, lead_name, created_at, closed_at, client_id, clients(name)')
-        .eq('rep_id', user.id)
-        .order('created_at', { ascending: false });
-      if (data) setDeals(data as unknown as DealRow[]);
+      const [dealsRes, achievementsRes, uaRes] = await Promise.all([
+        supabase.from('deals').select('id, status, revenue, rep_commission, commission_percent, lead_name, created_at, closed_at, client_id, clients(name)').eq('rep_id', user.id).order('created_at', { ascending: false }),
+        supabase.from('achievements').select('*').order('xp_reward', { ascending: true }),
+        supabase.from('user_achievements').select('*').eq('user_id', user.id),
+      ]);
+      if (dealsRes.data) setDeals(dealsRes.data as unknown as DealRow[]);
+      if (achievementsRes.data) setAchievements(achievementsRes.data as Achievement[]);
+      if (uaRes.data) setUserAchievements(uaRes.data as UserAchievement[]);
       setIsLoading(false);
     };
     fetchData();
@@ -47,6 +52,7 @@ export default function MyCommissionPage() {
   const totalCommission = wonDeals.reduce((s, d) => s + (d.rep_commission || 0), 0);
   const totalRevenue = wonDeals.reduce((s, d) => s + (d.revenue || 0), 0);
   const totalReachOuts = deals.length;
+  const earnedIds = new Set(userAchievements.map(ua => ua.achievement_id));
 
   // Group commission by client
   const clientCommissions = wonDeals.reduce<Record<string, { name: string; total: number; count: number }>>((acc, d) => {
@@ -74,22 +80,33 @@ export default function MyCommissionPage() {
           <StatCard title="Total Commission" value={`R${totalCommission.toLocaleString()}`} subtitle="From won deals" icon={<DollarSign className="h-5 w-5" />} variant="glow" />
           <StatCard title="Total Revenue" value={`R${totalRevenue.toLocaleString()}`} subtitle="Won deals" icon={<Briefcase className="h-5 w-5" />} />
           <StatCard title="Won Deals" value={wonDeals.length} subtitle={`${totalReachOuts} total reach-outs`} icon={<Trophy className="h-5 w-5" />} variant="gold" />
-          <StatCard title="People Reached" value={totalReachOuts} subtitle="All deals" icon={<Users className="h-5 w-5" />} />
+          <StatCard title="People Contacted" value={totalReachOuts} subtitle="All deals" icon={<Users className="h-5 w-5" />} />
         </div>
 
-        {/* Gamification */}
+        {/* Gamification - Level, XP, Streak, Achievements */}
         {profile && (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-3">
             <Card>
-              <CardHeader><CardTitle className="text-lg">Level & XP</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Star className="h-5 w-5 text-primary" /> Level & XP</CardTitle></CardHeader>
               <CardContent>
                 <XPProgress currentXP={profile.total_xp} level={profile.level} />
               </CardContent>
             </Card>
             <Card>
-              <CardHeader><CardTitle className="text-lg">Streak</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Flame className="h-5 w-5 text-[hsl(var(--status-amber))]" /> Streak</CardTitle></CardHeader>
               <CardContent>
                 <StreakBadge streak={profile.current_streak} longestStreak={profile.longest_streak} />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Trophy className="h-5 w-5 text-[hsl(var(--gold))]" /> Achievements</CardTitle></CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold">{userAchievements.length} <span className="text-sm font-normal text-muted-foreground">/ {achievements.length} unlocked</span></p>
+                <div className="flex gap-1 mt-2 flex-wrap">
+                  {achievements.filter(a => earnedIds.has(a.id)).slice(0, 6).map(a => (
+                    <span key={a.id} className="text-lg" title={a.name}>{a.icon}</span>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           </div>
