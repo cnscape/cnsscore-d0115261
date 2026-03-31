@@ -165,7 +165,14 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
     } as any]);
 
     setIsSubmitting(false);
-    if (error) { toast.error('Failed to create deal: ' + error.message); return; }
+    if (error) {
+      if (error.message.includes('deals_lead_name_offer_id_unique') || error.code === '23505') {
+        toast.error('This creator has already been contacted under this offer');
+      } else {
+        toast.error('Failed to create deal: ' + error.message);
+      }
+      return;
+    }
     toast.success('Deal created! 🎯');
     setShowAddDeal(false); resetForm(); fetchData();
   };

@@ -92,9 +92,9 @@ export default function AuthPage() {
           <CardHeader className="text-center">
             <div className="flex lg:hidden items-center justify-center gap-2 mb-4">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
-                CN
+                NH
               </div>
-              <span className="text-xl font-bold">Cape Neto</span>
+              <span className="text-xl font-bold">NetoHub</span>
             </div>
             <CardTitle className="text-2xl">Welcome</CardTitle>
             <CardDescription>Sign in to your account or create a new one</CardDescription>
