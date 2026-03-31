@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, ClipboardList, History, Trophy, Settings, Users, Target,
   LogOut, ChevronLeft, ChevronRight, Briefcase, TrendingUp, DollarSign, 
-  FileText, FolderKanban, Send, Kanban, BookOpen, GraduationCap, UserPlus
+  FileText, FolderKanban, Send, Kanban, BookOpen, GraduationCap, UserPlus, Phone, CalendarDays
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
