@@ -76,6 +76,7 @@ function AppRoutes() {
       <Route path="/admin/leads" element={<ProtectedRoute adminOnly><AdminLeadsPage /></ProtectedRoute>} />
       <Route path="/admin/playbook" element={<ProtectedRoute adminOnly><PlaybookPage /></ProtectedRoute>} />
       <Route path="/admin/training" element={<ProtectedRoute adminOnly><TrainingPage /></ProtectedRoute>} />
+      <Route path="/admin/calendars" element={<ProtectedRoute adminOnly><AdminCalendarsPage /></ProtectedRoute>} />
       <Route path="/admin/settings" element={<ProtectedRoute adminOnly><SettingsPage /></ProtectedRoute>} />
       
       <Route path="*" element={<NotFound />} />
