@@ -35,6 +35,7 @@ export function Sidebar() {
 
   const scoutLinks = [
     { href: '/daily-work', label: 'Daily Work', icon: LayoutDashboard },
+    { href: '/book-call', label: 'Book a Call', icon: Phone },
     { href: '/crm', label: 'CRM Pipeline', icon: Kanban },
     { href: '/deals', label: 'My Deals', icon: Briefcase },
     { href: '/my-commission', label: 'My Commission', icon: DollarSign },
