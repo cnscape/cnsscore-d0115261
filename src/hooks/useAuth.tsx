@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error as Error | null };
   };
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName: string, role?: string) => {
     const redirectUrl = `${window.location.origin}/`;
     
     const { error } = await supabase.auth.signUp({
@@ -97,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
       options: {
         emailRedirectTo: redirectUrl,
-        data: { full_name: fullName }
+        data: { full_name: fullName, role: role || 'sales_rep' }
       }
     });
     return { error: error as Error | null };
