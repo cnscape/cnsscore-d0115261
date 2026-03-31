@@ -52,17 +52,15 @@ export default function ScoutBookingPage() {
     if (!user) return;
     setIsLoading(true);
 
-    // Fetch bookings
-    const { data: bookingsData } = await supabase
+    const { data: bookingsData } = await (supabase as any)
       .from('scout_bookings')
       .select('*')
       .eq('scout_id', user.id)
       .order('created_at', { ascending: false });
-    if (bookingsData) setBookings(bookingsData as unknown as Booking[]);
+    if (bookingsData) setBookings(bookingsData as Booking[]);
 
-    // Fetch daily count
     const today = new Date().toISOString().split('T')[0];
-    const { count } = await supabase
+    const { count } = await (supabase as any)
       .from('scout_bookings')
       .select('*', { count: 'exact', head: true })
       .eq('scout_id', user.id)
@@ -70,13 +68,12 @@ export default function ScoutBookingPage() {
       .lte('booked_at', today + 'T23:59:59');
     setDailyCount(count || 0);
 
-    // Fetch limit
-    const { data: limitData } = await supabase
+    const { data: limitData } = await (supabase as any)
       .from('scout_limits')
       .select('daily_limit')
       .eq('scout_id', user.id)
       .single();
-    if (limitData) setDailyLimit((limitData as any).daily_limit);
+    if (limitData) setDailyLimit(limitData.daily_limit);
 
     setIsLoading(false);
   }, [user]);
@@ -88,15 +85,13 @@ export default function ScoutBookingPage() {
       toast.error(`Daily booking limit reached (${dailyLimit}). Try again tomorrow.`);
       return;
     }
-    // Round robin - get next salesperson
-    const { data: nextSp } = await supabase.rpc('get_next_salesperson');
+    const { data: nextSp } = await (supabase as any).rpc('get_next_salesperson');
     if (!nextSp) {
       toast.error('No salesperson available. Contact admin.');
       return;
     }
 
-    // Get their calendar
-    const { data: calData } = await supabase
+    const { data: calData } = await (supabase as any)
       .from('salesperson_calendars')
       .select('*')
       .eq('user_id', nextSp)
@@ -107,14 +102,13 @@ export default function ScoutBookingPage() {
       return;
     }
 
-    // Get salesperson name
     const { data: profileData } = await supabase
       .from('profiles')
       .select('full_name')
       .eq('user_id', nextSp)
       .single();
 
-    setAssignedCalendar(calData as unknown as SalespersonCalendar);
+    setAssignedCalendar(calData as SalespersonCalendar);
     setAssignedSalesperson(profileData?.full_name || 'Salesperson');
     setShowBooking(true);
   };
@@ -129,7 +123,7 @@ export default function ScoutBookingPage() {
     if (!user || !assignedCalendar) return;
     setIsSubmitting(true);
 
-    const { error } = await supabase.from('scout_bookings').insert([{
+    const { error } = await (supabase as any).from('scout_bookings').insert([{
       scout_id: user.id,
       salesperson_id: assignedCalendar.user_id,
       calendar_id: assignedCalendar.id,
@@ -137,7 +131,7 @@ export default function ScoutBookingPage() {
       lead_email: leadEmail.trim() || null,
       lead_contact: leadContact.trim() || null,
       status: 'booked',
-    }] as any);
+    }]);
 
     setIsSubmitting(false);
     if (error) { toast.error('Failed to log booking: ' + error.message); return; }
@@ -175,7 +169,6 @@ export default function ScoutBookingPage() {
           </Button>
         </div>
 
-        {/* Stats */}
         <div className="grid gap-4 md:grid-cols-4">
           <Card><CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Today's Bookings</p>
@@ -195,7 +188,6 @@ export default function ScoutBookingPage() {
           </CardContent></Card>
         </div>
 
-        {/* Booking Dialog */}
         <Dialog open={showBooking} onOpenChange={(o) => { if (!o) { setShowBooking(false); setShowCalendly(false); } }}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -254,7 +246,6 @@ export default function ScoutBookingPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Bookings History */}
         <Card>
           <CardHeader><CardTitle>My Bookings</CardTitle></CardHeader>
           <CardContent>

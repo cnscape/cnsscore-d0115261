@@ -33,19 +33,16 @@ export default function AdminCalendarsPage() {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Calendar form
   const [showAddCalendar, setShowAddCalendar] = useState(false);
   const [calUserId, setCalUserId] = useState('');
   const [calName, setCalName] = useState('');
   const [calLink, setCalLink] = useState('');
   const [calOrder, setCalOrder] = useState(0);
 
-  // Limit form
   const [showAddLimit, setShowAddLimit] = useState(false);
   const [limitScoutId, setLimitScoutId] = useState('');
   const [limitValue, setLimitValue] = useState(6);
 
-  // Edit booking
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [editStatus, setEditStatus] = useState('');
   const [editShowUp, setEditShowUp] = useState(false);
@@ -56,14 +53,14 @@ export default function AdminCalendarsPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     const [calsRes, limitsRes, bookingsRes, profilesRes] = await Promise.all([
-      supabase.from('salesperson_calendars').select('*').order('round_robin_order'),
-      supabase.from('scout_limits').select('*'),
-      supabase.from('scout_bookings').select('*').order('created_at', { ascending: false }),
+      (supabase as any).from('salesperson_calendars').select('*').order('round_robin_order'),
+      (supabase as any).from('scout_limits').select('*'),
+      (supabase as any).from('scout_bookings').select('*').order('created_at', { ascending: false }),
       supabase.from('profiles').select('user_id, full_name'),
     ]);
-    if (calsRes.data) setCalendars(calsRes.data as unknown as CalendarEntry[]);
-    if (limitsRes.data) setScoutLimits(limitsRes.data as unknown as ScoutLimit[]);
-    if (bookingsRes.data) setBookings(bookingsRes.data as unknown as Booking[]);
+    if (calsRes.data) setCalendars(calsRes.data as CalendarEntry[]);
+    if (limitsRes.data) setScoutLimits(limitsRes.data as ScoutLimit[]);
+    if (bookingsRes.data) setBookings(bookingsRes.data as Booking[]);
     if (profilesRes.data) setProfiles(profilesRes.data as Profile[]);
     setIsLoading(false);
   }, []);
@@ -74,9 +71,9 @@ export default function AdminCalendarsPage() {
 
   const handleAddCalendar = async () => {
     if (!calUserId || !calName.trim() || !calLink.trim()) { toast.error('All fields required'); return; }
-    const { error } = await supabase.from('salesperson_calendars').insert([{
+    const { error } = await (supabase as any).from('salesperson_calendars').insert([{
       user_id: calUserId, calendar_name: calName.trim(), calendar_link: calLink.trim(), round_robin_order: calOrder,
-    }] as any);
+    }]);
     if (error) { toast.error('Failed: ' + error.message); return; }
     toast.success('Calendar added!');
     setShowAddCalendar(false); setCalUserId(''); setCalName(''); setCalLink(''); setCalOrder(0);
@@ -84,21 +81,21 @@ export default function AdminCalendarsPage() {
   };
 
   const handleToggleCalendar = async (id: string, active: boolean) => {
-    await supabase.from('salesperson_calendars').update({ is_active: active } as any).eq('id', id);
+    await (supabase as any).from('salesperson_calendars').update({ is_active: active }).eq('id', id);
     fetchData();
   };
 
   const handleDeleteCalendar = async (id: string) => {
-    await supabase.from('salesperson_calendars').delete().eq('id', id);
+    await (supabase as any).from('salesperson_calendars').delete().eq('id', id);
     toast.success('Calendar removed');
     fetchData();
   };
 
   const handleAddLimit = async () => {
     if (!limitScoutId) { toast.error('Select a scout'); return; }
-    const { error } = await supabase.from('scout_limits').upsert([{
+    const { error } = await (supabase as any).from('scout_limits').upsert([{
       scout_id: limitScoutId, daily_limit: limitValue,
-    }] as any, { onConflict: 'scout_id' });
+    }], { onConflict: 'scout_id' });
     if (error) { toast.error('Failed: ' + error.message); return; }
     toast.success('Limit set!');
     setShowAddLimit(false); setLimitScoutId(''); setLimitValue(6);
@@ -107,10 +104,10 @@ export default function AdminCalendarsPage() {
 
   const handleUpdateBooking = async () => {
     if (!editingBooking) return;
-    const { error } = await supabase.from('scout_bookings').update({
+    const { error } = await (supabase as any).from('scout_bookings').update({
       status: editStatus, show_up: editShowUp, closed: editClosed,
       scout_percentage: editScoutPct, salesperson_percentage: editSpPct,
-    } as any).eq('id', editingBooking.id);
+    }).eq('id', editingBooking.id);
     if (error) { toast.error('Failed: ' + error.message); return; }
     toast.success('Booking updated');
     setEditingBooking(null);
@@ -136,7 +133,6 @@ export default function AdminCalendarsPage() {
             <TabsTrigger value="bookings"><Users className="h-4 w-4 mr-2" />All Bookings</TabsTrigger>
           </TabsList>
 
-          {/* CALENDARS TAB */}
           <TabsContent value="calendars" className="space-y-4">
             <div className="flex justify-end">
               <Dialog open={showAddCalendar} onOpenChange={setShowAddCalendar}>
@@ -205,7 +201,6 @@ export default function AdminCalendarsPage() {
             </div>
           </TabsContent>
 
-          {/* SCOUT LIMITS TAB */}
           <TabsContent value="limits" className="space-y-4">
             <div className="flex justify-end">
               <Dialog open={showAddLimit} onOpenChange={setShowAddLimit}>
@@ -252,9 +247,7 @@ export default function AdminCalendarsPage() {
             </div>
           </TabsContent>
 
-          {/* BOOKINGS TAB */}
           <TabsContent value="bookings" className="space-y-4">
-            {/* Edit Booking Dialog */}
             <Dialog open={!!editingBooking} onOpenChange={(o) => { if (!o) setEditingBooking(null); }}>
               <DialogContent>
                 <DialogHeader><DialogTitle>Edit Booking — {editingBooking?.lead_name}</DialogTitle></DialogHeader>
