@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { StatCard } from '@/components/ui/stat-card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Users, Shuffle, ArrowRight, MessageSquare, TrendingUp, Plus, Upload, UserPlus, FileText } from 'lucide-react';
+import { Loader2, Users, Shuffle, ArrowRight, MessageSquare, TrendingUp, Plus, Upload, UserPlus, FileText, Search, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -35,6 +35,11 @@ interface ProfileRow {
   is_active: boolean;
 }
 
+interface UserRole {
+  user_id: string;
+  role: string;
+}
+
 const STAGE_LABELS: Record<string, string> = {
   new_lead: 'New Lead', dm_sent: 'DM Sent', responded: 'Responded',
   discovery_booked: 'Discovery', presentation: 'Presentation',
@@ -54,6 +59,7 @@ const DELIMITER_OPTIONS: { value: Delimiter; label: string; char: string }[] = [
 export default function AdminLeadsPage() {
   const [leads, setLeads] = useState<PipelineLead[]>([]);
   const [profiles, setProfiles] = useState<ProfileRow[]>([]);
+  const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRepId, setSelectedRepId] = useState<string>('all');
 
@@ -79,16 +85,26 @@ export default function AdminLeadsPage() {
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
-    const [leadsRes, profilesRes] = await Promise.all([
+    const [leadsRes, profilesRes, rolesRes] = await Promise.all([
       supabase.from('pipeline_leads').select('*').order('created_at', { ascending: false }),
       supabase.from('profiles').select('id, user_id, full_name, is_active').eq('is_active', true),
+      supabase.from('user_roles').select('user_id, role'),
     ]);
     if (leadsRes.data) setLeads(leadsRes.data as PipelineLead[]);
     if (profilesRes.data) setProfiles(profilesRes.data as ProfileRow[]);
+    if (rolesRes.data) setUserRoles(rolesRes.data as UserRole[]);
     setIsLoading(false);
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  const getUserRole = (userId: string) => {
+    const role = userRoles.find(r => r.user_id === userId);
+    return role?.role || 'sales_rep';
+  };
+
+  const scouts = profiles.filter(p => getUserRole(p.user_id) === 'scout');
+  const salesReps = profiles.filter(p => ['sales_rep', 'team_lead'].includes(getUserRole(p.user_id)));
 
   const handleAssign = async (leadId: string, newOwnerId: string) => {
     const { error } = await supabase.from('pipeline_leads').update({ owner_id: newOwnerId } as any).eq('id', leadId);
@@ -109,7 +125,6 @@ export default function AdminLeadsPage() {
     fetchData();
   };
 
-  // Single lead add
   const handleAddSingleLead = async () => {
     if (!addLeadRepId || !newLeadName.trim()) return;
     const { error } = await supabase.from('pipeline_leads').insert([{
@@ -126,29 +141,21 @@ export default function AdminLeadsPage() {
     fetchData();
   };
 
-  // Parse bulk text for preview
   const parseBulkInput = useCallback((text: string, delimiter: Delimiter, mode: 'text' | 'csv', hasHeaders: boolean) => {
     if (!text.trim()) { setParsedPreview([]); return; }
-
     if (mode === 'csv') {
       const lines = text.trim().split('\n').map(l => l.trim()).filter(Boolean);
       const startIdx = hasHeaders ? 1 : 0;
       const results: { name: string; contact: string }[] = [];
       for (let i = startIdx; i < lines.length; i++) {
-        // CSV: split by comma, first col = name, second col = contact (optional)
         const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
         if (cols[0]) results.push({ name: cols[0], contact: cols[1] || '' });
       }
       setParsedPreview(results);
     } else {
-      // Text mode: names only, separated by chosen delimiter
       const delimChar = DELIMITER_OPTIONS.find(d => d.value === delimiter)?.char || ',';
       let items: string[];
-      if (delimiter === 'newline') {
-        items = text.split('\n');
-      } else {
-        items = text.split(delimChar);
-      }
+      if (delimiter === 'newline') { items = text.split('\n'); } else { items = text.split(delimChar); }
       const results = items.map(s => s.trim()).filter(Boolean).map(name => ({ name, contact: '' }));
       setParsedPreview(results);
     }
@@ -162,11 +169,7 @@ export default function AdminLeadsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      setBulkText(text);
-      setBulkImportMode('csv');
-    };
+    reader.onload = (ev) => { setBulkText(ev.target?.result as string); setBulkImportMode('csv'); };
     reader.readAsText(file);
   };
 
@@ -174,26 +177,18 @@ export default function AdminLeadsPage() {
     if (!bulkRepId || parsedPreview.length === 0) return;
     setIsImporting(true);
     const rows = parsedPreview.map(p => ({
-      owner_id: bulkRepId,
-      lead_name: p.name,
-      lead_contact: p.contact || null,
-      platform: bulkPlatform,
-      lead_score: bulkScore,
+      owner_id: bulkRepId, lead_name: p.name, lead_contact: p.contact || null, platform: bulkPlatform, lead_score: bulkScore,
     }));
-
     const { error } = await supabase.from('pipeline_leads').insert(rows as any);
     if (error) { toast.error('Import failed: ' + error.message); setIsImporting(false); return; }
     toast.success(`${rows.length} leads imported and assigned!`);
-    setShowBulkImport(false);
-    setBulkText('');
-    setParsedPreview([]);
-    setIsImporting(false);
+    setShowBulkImport(false); setBulkText(''); setParsedPreview([]); setIsImporting(false);
     fetchData();
   };
 
   const filteredLeads = selectedRepId === 'all' ? leads : leads.filter(l => l.owner_id === selectedRepId);
 
-  const repPerformance = profiles.map(p => {
+  const getPerformance = (profilesList: ProfileRow[]) => profilesList.map(p => {
     const repLeads = leads.filter(l => l.owner_id === p.user_id);
     return {
       profile: p,
@@ -202,6 +197,9 @@ export default function AdminLeadsPage() {
       won: repLeads.filter(l => l.stage === 'closed_won').length,
     };
   }).sort((a, b) => b.won - a.won);
+
+  const scoutPerformance = getPerformance(scouts);
+  const salesPerformance = getPerformance(salesReps);
 
   if (isLoading) {
     return <AppLayout><div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></AppLayout>;
@@ -213,10 +211,9 @@ export default function AdminLeadsPage() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-3xl font-bold">Lead Distribution</h1>
-            <p className="text-muted-foreground">{leads.length} total leads across {profiles.length} reps</p>
+            <p className="text-muted-foreground">{leads.length} total leads across {profiles.length} team members</p>
           </div>
           <div className="flex gap-2 flex-wrap">
-            {/* Add Single Lead */}
             <Dialog open={showAddLead} onOpenChange={setShowAddLead}>
               <DialogTrigger asChild>
                 <Button variant="outline"><UserPlus className="h-4 w-4 mr-2" /> Add Lead</Button>
@@ -225,11 +222,11 @@ export default function AdminLeadsPage() {
                 <DialogHeader><DialogTitle>Add Lead to Rep</DialogTitle></DialogHeader>
                 <div className="space-y-4 pt-2">
                   <div className="space-y-2">
-                    <Label>Assign to Rep *</Label>
+                    <Label>Assign to *</Label>
                     <Select value={addLeadRepId} onValueChange={setAddLeadRepId}>
-                      <SelectTrigger><SelectValue placeholder="Select rep..." /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Select team member..." /></SelectTrigger>
                       <SelectContent>
-                        {profiles.map(p => <SelectItem key={p.user_id} value={p.user_id}>{p.full_name}</SelectItem>)}
+                        {profiles.map(p => <SelectItem key={p.user_id} value={p.user_id}>{p.full_name} ({getUserRole(p.user_id) === 'scout' ? 'Scout' : 'Sales'})</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
@@ -274,7 +271,6 @@ export default function AdminLeadsPage() {
               </DialogContent>
             </Dialog>
 
-            {/* Bulk Import */}
             <Dialog open={showBulkImport} onOpenChange={setShowBulkImport}>
               <DialogTrigger asChild>
                 <Button variant="outline"><Upload className="h-4 w-4 mr-2" /> Bulk Import</Button>
@@ -285,13 +281,12 @@ export default function AdminLeadsPage() {
                   <div className="space-y-2">
                     <Label>Assign all leads to *</Label>
                     <Select value={bulkRepId} onValueChange={setBulkRepId}>
-                      <SelectTrigger><SelectValue placeholder="Select rep..." /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder="Select team member..." /></SelectTrigger>
                       <SelectContent>
                         {profiles.map(p => <SelectItem key={p.user_id} value={p.user_id}>{p.full_name}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
-
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label>Platform</Label>
@@ -318,13 +313,11 @@ export default function AdminLeadsPage() {
                       </Select>
                     </div>
                   </div>
-
                   <Tabs value={bulkImportMode} onValueChange={v => setBulkImportMode(v as 'text' | 'csv')}>
                     <TabsList className="w-full">
                       <TabsTrigger value="text" className="flex-1"><FileText className="h-4 w-4 mr-1" /> Paste Names</TabsTrigger>
                       <TabsTrigger value="csv" className="flex-1"><Upload className="h-4 w-4 mr-1" /> CSV Upload</TabsTrigger>
                     </TabsList>
-
                     <TabsContent value="text" className="space-y-3">
                       <div className="space-y-2">
                         <Label>Delimiter</Label>
@@ -337,88 +330,39 @@ export default function AdminLeadsPage() {
                       </div>
                       <div className="space-y-2">
                         <Label>Paste lead names</Label>
-                        <Textarea
-                          value={bulkText}
-                          onChange={e => setBulkText(e.target.value)}
-                          placeholder={bulkDelimiter === 'newline'
-                            ? "John Doe\nJane Smith\nBob Wilson"
-                            : bulkDelimiter === 'comma'
-                              ? "John Doe, Jane Smith, Bob Wilson"
-                              : "John Doe; Jane Smith; Bob Wilson"}
-                          className="min-h-[120px] font-mono text-sm"
-                        />
+                        <Textarea value={bulkText} onChange={e => setBulkText(e.target.value)}
+                          placeholder={bulkDelimiter === 'newline' ? "John Doe\nJane Smith" : "John Doe, Jane Smith"}
+                          className="min-h-[120px] font-mono text-sm" />
                       </div>
                     </TabsContent>
-
                     <TabsContent value="csv" className="space-y-3">
                       <div className="space-y-2">
                         <Label>Upload CSV file</Label>
                         <Input type="file" accept=".csv,.txt" onChange={handleFileUpload} />
-                        <p className="text-xs text-muted-foreground">CSV format: Name, Contact (one per line). First column = name, second = contact info (optional).</p>
+                        <p className="text-xs text-muted-foreground">CSV format: Name, Contact (one per line).</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          id="csvHeaders"
-                          checked={csvHasHeaders}
-                          onChange={e => setCsvHasHeaders(e.target.checked)}
-                          className="rounded border-input"
-                        />
-                        <Label htmlFor="csvHeaders" className="text-sm font-normal">First row is headers (skip it)</Label>
+                        <input type="checkbox" id="csvHeaders" checked={csvHasHeaders} onChange={e => setCsvHasHeaders(e.target.checked)} className="rounded border-input" />
+                        <Label htmlFor="csvHeaders" className="text-sm font-normal">First row is headers</Label>
                       </div>
-                      {bulkText && (
-                        <div className="space-y-2">
-                          <Label>Or paste CSV content directly</Label>
-                          <Textarea
-                            value={bulkText}
-                            onChange={e => setBulkText(e.target.value)}
-                            placeholder="Name,Contact&#10;John Doe,john@email.com&#10;Jane Smith,jane@email.com"
-                            className="min-h-[120px] font-mono text-sm"
-                          />
-                        </div>
-                      )}
                     </TabsContent>
                   </Tabs>
-
-                  {/* Preview */}
                   {parsedPreview.length > 0 && (
                     <div className="space-y-2">
                       <Label className="text-sm">Preview ({parsedPreview.length} leads)</Label>
                       <div className="rounded-lg border border-border max-h-[200px] overflow-y-auto">
                         <Table>
-                          <TableHeader>
-                            <TableRow className="bg-muted/50">
-                              <TableHead className="text-xs">#</TableHead>
-                              <TableHead className="text-xs">Name</TableHead>
-                              <TableHead className="text-xs">Contact</TableHead>
-                            </TableRow>
-                          </TableHeader>
+                          <TableHeader><TableRow className="bg-muted/50"><TableHead className="text-xs">#</TableHead><TableHead className="text-xs">Name</TableHead><TableHead className="text-xs">Contact</TableHead></TableRow></TableHeader>
                           <TableBody>
                             {parsedPreview.slice(0, 20).map((p, i) => (
-                              <TableRow key={i}>
-                                <TableCell className="text-xs text-muted-foreground py-1">{i + 1}</TableCell>
-                                <TableCell className="text-xs py-1 font-medium">{p.name}</TableCell>
-                                <TableCell className="text-xs py-1 text-muted-foreground">{p.contact || '—'}</TableCell>
-                              </TableRow>
+                              <TableRow key={i}><TableCell className="text-xs py-1">{i + 1}</TableCell><TableCell className="text-xs py-1 font-medium">{p.name}</TableCell><TableCell className="text-xs py-1 text-muted-foreground">{p.contact || '—'}</TableCell></TableRow>
                             ))}
-                            {parsedPreview.length > 20 && (
-                              <TableRow>
-                                <TableCell colSpan={3} className="text-xs text-center text-muted-foreground py-1">
-                                  ...and {parsedPreview.length - 20} more
-                                </TableCell>
-                              </TableRow>
-                            )}
                           </TableBody>
                         </Table>
                       </div>
                     </div>
                   )}
-
-                  <Button
-                    onClick={handleBulkImport}
-                    className="w-full"
-                    disabled={!bulkRepId || parsedPreview.length === 0 || isImporting}
-                  >
+                  <Button onClick={handleBulkImport} className="w-full" disabled={!bulkRepId || parsedPreview.length === 0 || isImporting}>
                     {isImporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Upload className="h-4 w-4 mr-2" />}
                     Import {parsedPreview.length} Leads
                   </Button>
@@ -440,55 +384,97 @@ export default function AdminLeadsPage() {
           <StatCard title="Active Pipeline" value={leads.filter(l => !['closed_won', 'closed_lost'].includes(l.stage)).length} icon={<ArrowRight className="h-5 w-5" />} />
         </div>
 
+        {/* Role-Based Performance Split */}
+        <div className="grid gap-6 md:grid-cols-2">
+          {/* Scout Performance */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Search className="h-5 w-5 text-accent" /> Scout Performance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {scoutPerformance.length > 0 ? (
+                <div className="rounded-xl border border-border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead>Scout</TableHead>
+                        <TableHead className="text-right">Leads</TableHead>
+                        <TableHead className="text-right">Conv.</TableHead>
+                        <TableHead className="text-right">Won</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {scoutPerformance.map(r => (
+                        <TableRow key={r.profile.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedRepId(r.profile.user_id)}>
+                          <TableCell className="font-medium">{r.profile.full_name}</TableCell>
+                          <TableCell className="text-right font-mono">{r.total}</TableCell>
+                          <TableCell className="text-right font-mono">{r.conversations}</TableCell>
+                          <TableCell className="text-right font-mono text-primary">{r.won}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-4">No scouts found</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Sales Rep Performance */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Briefcase className="h-5 w-5 text-primary" /> Sales Rep Performance
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {salesPerformance.length > 0 ? (
+                <div className="rounded-xl border border-border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        <TableHead>Sales Rep</TableHead>
+                        <TableHead className="text-right">Leads</TableHead>
+                        <TableHead className="text-right">Conv.</TableHead>
+                        <TableHead className="text-right">Won</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {salesPerformance.map(r => (
+                        <TableRow key={r.profile.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setSelectedRepId(r.profile.user_id)}>
+                          <TableCell className="font-medium">{r.profile.full_name}</TableCell>
+                          <TableCell className="text-right font-mono">{r.total}</TableCell>
+                          <TableCell className="text-right font-mono">{r.conversations}</TableCell>
+                          <TableCell className="text-right font-mono text-primary">{r.won}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-4">No sales reps found</p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Rep filter */}
         <div className="flex items-center gap-3">
-          <Label className="text-sm font-medium">View by Rep:</Label>
+          <Label className="text-sm font-medium">View by Member:</Label>
           <Select value={selectedRepId} onValueChange={setSelectedRepId}>
             <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Reps</SelectItem>
+              <SelectItem value="all">All Members</SelectItem>
               {profiles.map(p => (
-                <SelectItem key={p.user_id} value={p.user_id}>{p.full_name}</SelectItem>
+                <SelectItem key={p.user_id} value={p.user_id}>{p.full_name} ({getUserRole(p.user_id) === 'scout' ? 'Scout' : 'Sales'})</SelectItem>
               ))}
             </SelectContent>
           </Select>
-          {selectedRepId !== 'all' && (
-            <Badge variant="outline">{filteredLeads.length} leads</Badge>
-          )}
+          {selectedRepId !== 'all' && <Badge variant="outline">{filteredLeads.length} leads</Badge>}
         </div>
-
-        {/* Rep Performance */}
-        <Card>
-          <CardHeader><CardTitle className="text-lg">Rep Performance</CardTitle></CardHeader>
-          <CardContent>
-            <div className="rounded-xl border border-border overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead>Rep</TableHead>
-                    <TableHead className="text-right">Total Leads</TableHead>
-                    <TableHead className="text-right">Conversations</TableHead>
-                    <TableHead className="text-right">Won</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {repPerformance.map(r => (
-                    <TableRow
-                      key={r.profile.id}
-                      className={selectedRepId === r.profile.user_id ? 'bg-primary/5' : 'cursor-pointer hover:bg-muted/50'}
-                      onClick={() => setSelectedRepId(r.profile.user_id)}
-                    >
-                      <TableCell className="font-medium">{r.profile.full_name}</TableCell>
-                      <TableCell className="text-right font-mono">{r.total}</TableCell>
-                      <TableCell className="text-right font-mono">{r.conversations}</TableCell>
-                      <TableCell className="text-right font-mono text-primary">{r.won}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* All Leads Table */}
         <Card>
@@ -506,6 +492,7 @@ export default function AdminLeadsPage() {
                     <TableHead>Stage</TableHead>
                     <TableHead>Score</TableHead>
                     <TableHead>Assigned To</TableHead>
+                    <TableHead>Role</TableHead>
                     <TableHead>Last Activity</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -516,13 +503,9 @@ export default function AdminLeadsPage() {
                         <p className="font-medium">{lead.lead_name}</p>
                         <p className="text-xs text-muted-foreground">{lead.platform}</p>
                       </TableCell>
+                      <TableCell><Badge variant="outline" className="text-xs">{STAGE_LABELS[lead.stage] || lead.stage}</Badge></TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="text-xs">{STAGE_LABELS[lead.stage] || lead.stage}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={lead.lead_score === 'A' ? 'text-[hsl(var(--status-green))]' : ''}>
-                          {lead.lead_score}
-                        </Badge>
+                        <Badge variant="outline" className={lead.lead_score === 'A' ? 'text-[hsl(var(--status-green))]' : ''}>{lead.lead_score}</Badge>
                       </TableCell>
                       <TableCell>
                         <Select value={lead.owner_id} onValueChange={(v) => handleAssign(lead.id, v)}>
@@ -532,13 +515,18 @@ export default function AdminLeadsPage() {
                           </SelectContent>
                         </Select>
                       </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs">
+                          {getUserRole(lead.owner_id) === 'scout' ? 'Scout' : 'Sales'}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {formatDistanceToNow(new Date(lead.last_activity_at), { addSuffix: true })}
                       </TableCell>
                     </TableRow>
                   ))}
                   {filteredLeads.length === 0 && (
-                    <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No leads yet</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No leads yet</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
