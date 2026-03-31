@@ -26,6 +26,8 @@ import DailyWorkPage from "./pages/DailyWorkPage";
 import PlaybookPage from "./pages/PlaybookPage";
 import TrainingPage from "./pages/TrainingPage";
 import AdminLeadsPage from "./pages/AdminLeadsPage";
+import ScoutBookingPage from "./pages/ScoutBookingPage";
+import AdminCalendarsPage from "./pages/AdminCalendarsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +53,7 @@ function AppRoutes() {
       <Route path="/dashboard" element={<ProtectedRoute><RepDashboard /></ProtectedRoute>} />
       <Route path="/daily-work" element={<ProtectedRoute><DailyWorkPage /></ProtectedRoute>} />
       <Route path="/crm" element={<ProtectedRoute><CRMPipelinePage /></ProtectedRoute>} />
+      <Route path="/book-call" element={<ProtectedRoute><ScoutBookingPage /></ProtectedRoute>} />
       <Route path="/scorecard" element={<ProtectedRoute><ScorecardPage /></ProtectedRoute>} />
       <Route path="/deals" element={<ProtectedRoute><DealsPage /></ProtectedRoute>} />
       <Route path="/my-commission" element={<ProtectedRoute><MyCommissionPage /></ProtectedRoute>} />
@@ -73,6 +76,7 @@ function AppRoutes() {
       <Route path="/admin/leads" element={<ProtectedRoute adminOnly><AdminLeadsPage /></ProtectedRoute>} />
       <Route path="/admin/playbook" element={<ProtectedRoute adminOnly><PlaybookPage /></ProtectedRoute>} />
       <Route path="/admin/training" element={<ProtectedRoute adminOnly><TrainingPage /></ProtectedRoute>} />
+      <Route path="/admin/calendars" element={<ProtectedRoute adminOnly><AdminCalendarsPage /></ProtectedRoute>} />
       <Route path="/admin/settings" element={<ProtectedRoute adminOnly><SettingsPage /></ProtectedRoute>} />
       
       <Route path="*" element={<NotFound />} />

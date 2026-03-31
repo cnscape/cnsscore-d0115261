@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, ClipboardList, History, Trophy, Settings, Users, Target,
   LogOut, ChevronLeft, ChevronRight, Briefcase, TrendingUp, DollarSign, 
-  FileText, FolderKanban, Send, Kanban, BookOpen, GraduationCap, UserPlus
+  FileText, FolderKanban, Send, Kanban, BookOpen, GraduationCap, UserPlus, Phone, CalendarDays
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -35,6 +35,7 @@ export function Sidebar() {
 
   const scoutLinks = [
     { href: '/daily-work', label: 'Daily Work', icon: LayoutDashboard },
+    { href: '/book-call', label: 'Book a Call', icon: Phone },
     { href: '/crm', label: 'CRM Pipeline', icon: Kanban },
     { href: '/deals', label: 'My Deals', icon: Briefcase },
     { href: '/my-commission', label: 'My Commission', icon: DollarSign },
@@ -60,6 +61,7 @@ export function Sidebar() {
     { href: '/admin/campaigns', label: 'Campaigns', icon: Target },
     { href: '/admin/clients', label: 'Clients & Offers', icon: Briefcase },
     { href: '/admin/team', label: 'Team', icon: Users },
+    { href: '/admin/calendars', label: 'Booking System', icon: CalendarDays },
   ];
 
   const adminToolLinks = [
