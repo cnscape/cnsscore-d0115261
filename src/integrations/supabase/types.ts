@@ -766,6 +766,42 @@ export type Database = {
           },
         ]
       }
+      salesperson_calendars: {
+        Row: {
+          calendar_link: string
+          calendar_name: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          round_robin_order: number | null
+          total_bookings: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          calendar_link: string
+          calendar_name: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          round_robin_order?: number | null
+          total_bookings?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          calendar_link?: string
+          calendar_name?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          round_robin_order?: number | null
+          total_bookings?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       scorecards: {
         Row: {
           calls_made: number | null
@@ -818,6 +854,105 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      scout_bookings: {
+        Row: {
+          booked_at: string | null
+          calendar_id: string | null
+          closed: boolean | null
+          created_at: string | null
+          deal_id: string | null
+          id: string
+          lead_contact: string | null
+          lead_email: string | null
+          lead_name: string
+          notes: string | null
+          salesperson_id: string
+          salesperson_percentage: number | null
+          scout_id: string
+          scout_percentage: number | null
+          show_up: boolean | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          booked_at?: string | null
+          calendar_id?: string | null
+          closed?: boolean | null
+          created_at?: string | null
+          deal_id?: string | null
+          id?: string
+          lead_contact?: string | null
+          lead_email?: string | null
+          lead_name: string
+          notes?: string | null
+          salesperson_id: string
+          salesperson_percentage?: number | null
+          scout_id: string
+          scout_percentage?: number | null
+          show_up?: boolean | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          booked_at?: string | null
+          calendar_id?: string | null
+          closed?: boolean | null
+          created_at?: string | null
+          deal_id?: string | null
+          id?: string
+          lead_contact?: string | null
+          lead_email?: string | null
+          lead_name?: string
+          notes?: string | null
+          salesperson_id?: string
+          salesperson_percentage?: number | null
+          scout_id?: string
+          scout_percentage?: number | null
+          show_up?: boolean | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scout_bookings_calendar_id_fkey"
+            columns: ["calendar_id"]
+            isOneToOne: false
+            referencedRelation: "salesperson_calendars"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scout_bookings_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scout_limits: {
+        Row: {
+          created_at: string | null
+          daily_limit: number | null
+          id: string
+          scout_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          daily_limit?: number | null
+          id?: string
+          scout_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          daily_limit?: number | null
+          id?: string
+          scout_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       targets: {
         Row: {
@@ -951,6 +1086,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_next_salesperson: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
