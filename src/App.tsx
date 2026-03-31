@@ -26,6 +26,8 @@ import DailyWorkPage from "./pages/DailyWorkPage";
 import PlaybookPage from "./pages/PlaybookPage";
 import TrainingPage from "./pages/TrainingPage";
 import AdminLeadsPage from "./pages/AdminLeadsPage";
+import ScoutBookingPage from "./pages/ScoutBookingPage";
+import AdminCalendarsPage from "./pages/AdminCalendarsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
