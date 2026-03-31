@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Loader2, Trophy, Target, Flame, Users, Briefcase, Shield } from 'lucide-react';
+import { Loader2, Trophy, Target, Flame, Users, Briefcase, Shield, Search, Phone } from 'lucide-react';
 
 export default function AuthPage() {
   const { user, isLoading } = useAuth();
@@ -163,17 +163,18 @@ function SignUpForm({ isSubmitting, setIsSubmitting }: { isSubmitting: boolean; 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
-  const [teamType, setTeamType] = useState<string>('');
+  const [selectedRole, setSelectedRole] = useState<string>('');
 
-  const teamOptions = [
-    { value: 'sales', label: 'Growth Sales Team', description: 'Sales reps — KPIs, deals, commissions', icon: Briefcase },
+  const roleOptions = [
+    { value: 'sales_rep', label: 'Salesperson', description: 'Close deals, manage pipeline, earn commissions', icon: Briefcase },
+    { value: 'scout', label: 'Scout', description: 'Book calls, source leads, earn booking commissions', icon: Search },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!teamType) {
-      toast.error('Please select your team');
+    if (!selectedRole) {
+      toast.error('Please select your role');
       return;
     }
     
@@ -184,7 +185,7 @@ function SignUpForm({ isSubmitting, setIsSubmitting }: { isSubmitting: boolean; 
     
     setIsSubmitting(true);
     
-    const { error } = await signUp(email, password, fullName);
+    const { error } = await signUp(email, password, fullName, selectedRole);
     
     if (error) {
       if (error.message.includes('already registered')) {
@@ -193,8 +194,6 @@ function SignUpForm({ isSubmitting, setIsSubmitting }: { isSubmitting: boolean; 
         toast.error(error.message || 'Failed to create account');
       }
     } else {
-      // Store team type in profile after signup
-      // The profile will be created by the trigger, we'll update team_type
       toast.success('Account created! Check your email to verify, then sign in.');
     }
     
@@ -217,18 +216,18 @@ function SignUpForm({ isSubmitting, setIsSubmitting }: { isSubmitting: boolean; 
         <p className="text-xs text-muted-foreground">At least 6 characters</p>
       </div>
 
-      {/* Team Type Selection */}
+      {/* Role Selection */}
       <div className="space-y-2">
-        <Label>Your Team <span className="text-destructive">*</span></Label>
+        <Label>I am a... <span className="text-destructive">*</span></Label>
         <div className="grid grid-cols-1 gap-2">
-          {teamOptions.map(option => {
+          {roleOptions.map(option => {
             const Icon = option.icon;
-            const isSelected = teamType === option.value;
+            const isSelected = selectedRole === option.value;
             return (
               <button
                 key={option.value}
                 type="button"
-                onClick={() => setTeamType(option.value)}
+                onClick={() => setSelectedRole(option.value)}
                 className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-all ${
                   isSelected 
                     ? 'border-primary bg-primary/10 text-foreground' 
@@ -246,7 +245,7 @@ function SignUpForm({ isSubmitting, setIsSubmitting }: { isSubmitting: boolean; 
         </div>
       </div>
 
-      <Button type="submit" className="w-full" disabled={isSubmitting || !teamType}>
+      <Button type="submit" className="w-full" disabled={isSubmitting || !selectedRole}>
         {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating account...</>) : 'Create Account'}
       </Button>
     </form>
