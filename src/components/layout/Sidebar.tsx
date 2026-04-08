@@ -62,6 +62,7 @@ export function Sidebar() {
     { href: '/admin/clients', label: 'Clients & Offers', icon: Briefcase },
     { href: '/admin/team', label: 'Team', icon: Users },
     { href: '/admin/calendars', label: 'Booking System', icon: CalendarDays },
+    { href: '/admin/performance', label: 'Team Performance', icon: TrendingUp },
   ];
 
   const adminToolLinks = [
