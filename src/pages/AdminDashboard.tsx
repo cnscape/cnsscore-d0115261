@@ -92,12 +92,19 @@ export default function AdminDashboard() {
     };
   }).sort((a, b) => b.conversations - a.conversations);
 
+  const escapeCSV = (val: unknown): string => {
+    const s = String(val ?? '');
+    const escaped = s.replace(/"/g, '""');
+    const safe = /^[=+\-@\t\r]/.test(escaped) ? `'${escaped}` : escaped;
+    return `"${safe}"`;
+  };
+
   const handleExport = () => {
     const headers = ['Name', '7d Conversations', '7d Won', '7d Revenue', '7d Commission'];
     const rows = repStats.map(r => [
       r.profile.full_name, r.conversations, r.won, r.revenue, r.commission
     ]);
-    const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+    const csv = [headers, ...rows].map(row => row.map(escapeCSV).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
