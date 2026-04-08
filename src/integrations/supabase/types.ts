@@ -95,6 +95,27 @@ export type Database = {
           },
         ]
       }
+      app_settings: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string | null
+          value: string | null
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string | null
+          value?: string | null
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string | null
+          value?: string | null
+        }
+        Relationships: []
+      }
       campaigns: {
         Row: {
           client_id: string | null
@@ -1086,6 +1107,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      award_xp: { Args: { _user_id: string; _xp: number }; Returns: undefined }
       get_next_salesperson: { Args: never; Returns: string }
       has_role: {
         Args: {
@@ -1095,6 +1117,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      update_streak: { Args: { _user_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "sales_rep" | "team_lead" | "scout"
