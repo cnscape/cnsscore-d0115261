@@ -29,6 +29,7 @@ import AdminLeadsPage from "./pages/AdminLeadsPage";
 import ScoutBookingPage from "./pages/ScoutBookingPage";
 import AdminCalendarsPage from "./pages/AdminCalendarsPage";
 import AdminTeamPerformancePage from "./pages/AdminTeamPerformancePage";
+import CollectionsCRMPage from "./pages/CollectionsCRMPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -79,6 +80,8 @@ function AppRoutes() {
       <Route path="/admin/training" element={<ProtectedRoute adminOnly><TrainingPage /></ProtectedRoute>} />
       <Route path="/admin/calendars" element={<ProtectedRoute adminOnly><AdminCalendarsPage /></ProtectedRoute>} />
       <Route path="/admin/performance" element={<ProtectedRoute adminOnly><AdminTeamPerformancePage /></ProtectedRoute>} />
+      <Route path="/admin/collections" element={<ProtectedRoute adminOnly><CollectionsCRMPage /></ProtectedRoute>} />
+      <Route path="/collections" element={<ProtectedRoute><CollectionsCRMPage /></ProtectedRoute>} />
       <Route path="/admin/settings" element={<ProtectedRoute adminOnly><SettingsPage /></ProtectedRoute>} />
       
       <Route path="*" element={<NotFound />} />
