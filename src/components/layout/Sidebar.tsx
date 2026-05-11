@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, ClipboardList, History, Trophy, Settings, Users, Target,
   LogOut, ChevronLeft, ChevronRight, Briefcase, TrendingUp, DollarSign, 
-  FileText, FolderKanban, Send, Kanban, BookOpen, GraduationCap, UserPlus, Phone, CalendarDays
+  FileText, FolderKanban, Send, Kanban, BookOpen, GraduationCap, UserPlus, Phone, CalendarDays, Wallet
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -26,6 +26,7 @@ export function Sidebar() {
     { href: '/scorecard', label: "Today's Scorecard", icon: ClipboardList },
     { href: '/deals', label: 'My Deals', icon: Briefcase },
     { href: '/my-commission', label: 'My Commission', icon: DollarSign },
+    { href: '/collections', label: 'Collections', icon: Wallet },
     { href: '/playbook', label: 'Playbook', icon: BookOpen },
     { href: '/training', label: 'Training & SOPs', icon: GraduationCap },
     { href: '/history', label: 'My History', icon: History },
@@ -39,6 +40,7 @@ export function Sidebar() {
     { href: '/crm', label: 'CRM Pipeline', icon: Kanban },
     { href: '/deals', label: 'My Deals', icon: Briefcase },
     { href: '/my-commission', label: 'My Commission', icon: DollarSign },
+    { href: '/collections', label: 'Collections', icon: Wallet },
     { href: '/playbook', label: 'Playbook', icon: BookOpen },
     { href: '/training', label: 'Training & SOPs', icon: GraduationCap },
     { href: '/achievements', label: 'Achievements', icon: Trophy },
@@ -63,6 +65,7 @@ export function Sidebar() {
     { href: '/admin/team', label: 'Team', icon: Users },
     { href: '/admin/calendars', label: 'Booking System', icon: CalendarDays },
     { href: '/admin/performance', label: 'Team Performance', icon: TrendingUp },
+    { href: '/admin/collections', label: 'Collections CRM', icon: Wallet },
   ];
 
   const adminToolLinks = [
