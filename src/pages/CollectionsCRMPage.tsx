@@ -471,9 +471,9 @@ export default function CollectionsCRMPage() {
                             <CommandList>
                               <CommandEmpty>No matches</CommandEmpty>
                               <CommandGroup>
-                                <CommandItem onSelect={() => updateDebt(selected.id, { assigned_to: null } as any)}>Unassigned</CommandItem>
+                                <CommandItem onSelect={() => updateDebt(selected.id, { assignee_id: null, assignee_name: null } as any)}>Unassigned</CommandItem>
                                 {team.map(t => (
-                                  <CommandItem key={t.user_id} onSelect={() => updateDebt(selected.id, { assigned_to: t.user_id } as any)}>
+                                  <CommandItem key={t.user_id} onSelect={() => updateDebt(selected.id, { assignee_id: t.user_id, assignee_name: t.full_name } as any)}>
                                     <Avatar className="mr-2 h-5 w-5"><AvatarFallback className="bg-primary/20 text-[10px] text-primary">{initials(t.full_name)}</AvatarFallback></Avatar>
                                     {t.full_name}
                                   </CommandItem>
