@@ -27,28 +27,31 @@ import { format, formatDistanceToNow } from 'date-fns';
 interface DebtRecord {
   id: string;
   client_name: string;
-  client_contact: string | null;
+  contact: string | null;
   description: string | null;
   original_amount: number;
-  commission_percent: number;
-  assigned_to: string | null;
+  amount_paid: number;
+  outstanding_amount: number;
+  commission_percentage: number;
+  commission_amount: number;
+  assignee_id: string | null;
+  assignee_name: string | null;
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  stage: string;
+  status: string;
   next_follow_up: string | null;
-  notes: string | null;
   created_at: string;
 }
 
 interface DebtPayment {
   id: string;
-  debt_id: string;
-  amount: number;
+  debt_record_id: string;
+  payment_amount: number;
   payment_date: string;
   payment_method: string | null;
   payment_reference: string | null;
-  notes: string | null;
+  payment_note: string | null;
   proof_url: string | null;
-  added_by: string | null;
+  collected_by: string | null;
   created_at: string;
 }
 
@@ -59,12 +62,10 @@ interface TeamMember {
 }
 
 const STAGES = [
-  { key: 'new',         label: 'New',          accent: 'from-slate-500/10 to-transparent' },
-  { key: 'contacted',   label: 'Contacted',    accent: 'from-blue-500/10 to-transparent' },
-  { key: 'in_progress', label: 'In Progress',  accent: 'from-amber-500/10 to-transparent' },
-  { key: 'partial',     label: 'Partial Paid', accent: 'from-orange-500/10 to-transparent' },
-  { key: 'paid',        label: 'Paid',         accent: 'from-emerald-500/10 to-transparent' },
-  { key: 'escalated',   label: 'Escalated',    accent: 'from-rose-500/10 to-transparent' },
+  { key: 'unpaid',       label: 'Unpaid',       accent: 'from-slate-500/10 to-transparent' },
+  { key: 'in_progress',  label: 'In Progress',  accent: 'from-amber-500/10 to-transparent' },
+  { key: 'partial_paid', label: 'Partial Paid', accent: 'from-orange-500/10 to-transparent' },
+  { key: 'paid',         label: 'Paid',         accent: 'from-emerald-500/10 to-transparent' },
 ];
 
 const PRIORITIES = [
@@ -117,7 +118,7 @@ export default function CollectionsCRMPage() {
     setDebts((d as any) || []);
     const grouped: Record<string, DebtPayment[]> = {};
     ((p as any) || []).forEach((row: DebtPayment) => {
-      (grouped[row.debt_id] ||= []).push(row);
+      (grouped[row.debt_record_id] ||= []).push(row);
     });
     setPaymentsByDebt(grouped);
     setTeam((t as any) || []);
@@ -128,10 +129,10 @@ export default function CollectionsCRMPage() {
 
   const calc = (debt: DebtRecord) => {
     const list = paymentsByDebt[debt.id] || [];
-    const paid = list.reduce((s, x) => s + Number(x.amount || 0), 0);
+    const paid = list.reduce((s, x) => s + Number(x.payment_amount || 0), 0);
     const remaining = Math.max(0, Number(debt.original_amount) - paid);
     const progress = debt.original_amount > 0 ? Math.min(100, (paid / Number(debt.original_amount)) * 100) : 0;
-    const commission = paid * (Number(debt.commission_percent) / 100);
+    const commission = paid * (Number(debt.commission_percentage) / 100);
     const status: 'unpaid' | 'partial' | 'paid' =
       paid <= 0 ? 'unpaid' : remaining <= 0.001 ? 'paid' : 'partial';
     return { paid, remaining, progress, commission, status };
@@ -143,7 +144,7 @@ export default function CollectionsCRMPage() {
     return debts.filter(d =>
       d.client_name.toLowerCase().includes(q) ||
       (d.description || '').toLowerCase().includes(q) ||
-      (d.client_contact || '').toLowerCase().includes(q)
+      (d.contact || '').toLowerCase().includes(q)
     );
   }, [debts, search]);
 
@@ -162,11 +163,12 @@ export default function CollectionsCRMPage() {
     if (!user || !nClient.trim() || !nAmount) return;
     const { error } = await (supabase as any).from('debt_records').insert([{
       client_name: nClient.trim(),
-      client_contact: nContact.trim() || null,
+      contact: nContact.trim() || null,
       description: nDesc.trim() || null,
       original_amount: Number(nAmount),
-      commission_percent: Number(nCommission || 10),
-      assigned_to: nAssignee,
+      commission_percentage: Number(nCommission || 10),
+      assignee_id: nAssignee,
+      assignee_name: memberById(nAssignee)?.full_name || null,
       priority: nPriority,
       next_follow_up: nFollowUp || null,
       created_by: user.id,
@@ -187,10 +189,10 @@ export default function CollectionsCRMPage() {
 
   const recomputeStage = async (debt: DebtRecord) => {
     const c = calc(debt);
-    let stage = debt.stage;
-    if (c.status === 'paid') stage = 'paid';
-    else if (c.status === 'partial' && (debt.stage === 'new' || debt.stage === 'contacted')) stage = 'partial';
-    if (stage !== debt.stage) await updateDebt(debt.id, { stage } as any);
+    let status = debt.status;
+    if (c.status === 'paid') status = 'paid';
+    else if (c.status === 'partial' && debt.status === 'unpaid') status = 'partial_paid';
+    if (status !== debt.status) await updateDebt(debt.id, { status } as any);
   };
 
   const addPayment = async () => {
@@ -204,14 +206,14 @@ export default function CollectionsCRMPage() {
       proof_url = path;
     }
     const { error } = await (supabase as any).from('debt_payments').insert([{
-      debt_id: selected.id,
-      amount: Number(pAmount),
+      debt_record_id: selected.id,
+      payment_amount: Number(pAmount),
       payment_date: pDate,
       payment_method: pMethod,
       payment_reference: pRef || null,
-      notes: pNotes || null,
+      payment_note: pNotes || null,
       proof_url,
-      added_by: user?.id,
+      collected_by: user?.id,
     }]);
     if (error) { toast.error(error.message); setPSaving(false); return; }
     toast.success('Payment recorded');
@@ -234,7 +236,7 @@ export default function CollectionsCRMPage() {
 
   const handleDrop = async (stageKey: string) => {
     if (!draggedId) return;
-    await updateDebt(draggedId, { stage: stageKey } as any);
+    await updateDebt(draggedId, { status: stageKey } as any);
     setDraggedId(null);
   };
 
@@ -301,7 +303,7 @@ export default function CollectionsCRMPage() {
         <div className="overflow-x-auto pb-4">
           <div className="flex gap-4 min-w-[1400px]">
             {STAGES.map(stage => {
-              const stageDebts = filtered.filter(d => d.stage === stage.key);
+              const stageDebts = filtered.filter(d => d.status === stage.key);
               return (
                 <div
                   key={stage.key}
@@ -317,7 +319,7 @@ export default function CollectionsCRMPage() {
                     <div className="space-y-2 min-h-[120px]">
                       {stageDebts.map(debt => {
                         const c = calc(debt);
-                        const m = memberById(debt.assigned_to);
+                        const m = memberById(debt.assignee_id);
                         const prio = PRIORITIES.find(p => p.key === debt.priority) || PRIORITIES[1];
                         return (
                           <Card
@@ -383,7 +385,7 @@ export default function CollectionsCRMPage() {
           {selected && (() => {
             const c = calc(selected);
             const list = paymentsByDebt[selected.id] || [];
-            const m = memberById(selected.assigned_to);
+            const m = memberById(selected.assignee_id);
             return (
               <div className="space-y-6">
                 <SheetHeader>
@@ -393,7 +395,7 @@ export default function CollectionsCRMPage() {
                     </Avatar>
                     <div className="text-left">
                       <p className="text-base">{selected.client_name}</p>
-                      <p className="text-xs font-normal text-muted-foreground">{selected.client_contact || 'No contact info'}</p>
+                      <p className="text-xs font-normal text-muted-foreground">{selected.contact || 'No contact info'}</p>
                     </div>
                   </SheetTitle>
                 </SheetHeader>
@@ -407,13 +409,13 @@ export default function CollectionsCRMPage() {
                       onClick={() => updateDebt(selected.id, { stage: s.key } as any)}
                       className={cn(
                         "rounded-full border px-3 py-1 text-xs transition-all",
-                        selected.stage === s.key
+                        selected.status === s.key
                           ? "border-primary bg-primary text-primary-foreground"
                           : "border-border/60 text-muted-foreground hover:border-primary/40 hover:text-foreground",
                         !isAdmin && "cursor-default opacity-70"
                       )}
                     >
-                      {selected.stage === s.key && <Check className="mr-1 inline h-3 w-3" />}
+                      {selected.status === s.key && <Check className="mr-1 inline h-3 w-3" />}
                       {s.label}
                     </button>
                   ))}
@@ -444,7 +446,7 @@ export default function CollectionsCRMPage() {
                       <Progress value={c.progress} />
                     </div>
                     <div className="flex items-center justify-between border-t border-border/40 pt-3 text-xs">
-                      <span className="text-muted-foreground">Commission earned ({selected.commission_percent}%)</span>
+                      <span className="text-muted-foreground">Commission earned ({selected.commission_percentage}%)</span>
                       <span className="font-semibold text-primary">R{c.commission.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                     </div>
                   </CardContent>
@@ -469,9 +471,9 @@ export default function CollectionsCRMPage() {
                             <CommandList>
                               <CommandEmpty>No matches</CommandEmpty>
                               <CommandGroup>
-                                <CommandItem onSelect={() => updateDebt(selected.id, { assigned_to: null } as any)}>Unassigned</CommandItem>
+                                <CommandItem onSelect={() => updateDebt(selected.id, { assignee_id: null, assignee_name: null } as any)}>Unassigned</CommandItem>
                                 {team.map(t => (
-                                  <CommandItem key={t.user_id} onSelect={() => updateDebt(selected.id, { assigned_to: t.user_id } as any)}>
+                                  <CommandItem key={t.user_id} onSelect={() => updateDebt(selected.id, { assignee_id: t.user_id, assignee_name: t.full_name } as any)}>
                                     <Avatar className="mr-2 h-5 w-5"><AvatarFallback className="bg-primary/20 text-[10px] text-primary">{initials(t.full_name)}</AvatarFallback></Avatar>
                                     {t.full_name}
                                   </CommandItem>
@@ -511,8 +513,8 @@ export default function CollectionsCRMPage() {
                   <div className="space-y-1">
                     <p className="text-xs uppercase text-muted-foreground">Commission %</p>
                     {isAdmin ? (
-                      <Input type="number" defaultValue={selected.commission_percent} onBlur={(e) => updateDebt(selected.id, { commission_percent: Number(e.target.value) } as any)} />
-                    ) : (<p>{selected.commission_percent}%</p>)}
+                      <Input type="number" defaultValue={selected.commission_percentage} onBlur={(e) => updateDebt(selected.id, { commission_percentage: Number(e.target.value) } as any)} />
+                    ) : (<p>{selected.commission_percentage}%</p>)}
                   </div>
                 </div>
 
@@ -548,7 +550,7 @@ export default function CollectionsCRMPage() {
                             <div className="rounded-xl border border-border/60 bg-card/60 p-3">
                               <div className="flex items-start justify-between">
                                 <div>
-                                  <p className="font-semibold text-emerald-400">+R{Number(p.amount).toLocaleString()}</p>
+                                  <p className="font-semibold text-emerald-400">+R{Number(p.payment_amount).toLocaleString()}</p>
                                   <p className="text-xs text-muted-foreground">
                                     {format(new Date(p.payment_date), 'PPP')} · {p.payment_method || 'method n/a'}
                                   </p>
@@ -560,7 +562,7 @@ export default function CollectionsCRMPage() {
                                 )}
                               </div>
                               {p.payment_reference && <p className="mt-1 text-xs">Ref: {p.payment_reference}</p>}
-                              {p.notes && <p className="mt-1 text-xs text-muted-foreground">{p.notes}</p>}
+                              {p.payment_note && <p className="mt-1 text-xs text-muted-foreground">{p.payment_note}</p>}
                               {p.proof_url && (
                                 <a
                                   href="#"
