@@ -303,7 +303,7 @@ export default function CollectionsCRMPage() {
         <div className="overflow-x-auto pb-4">
           <div className="flex gap-4 min-w-[1400px]">
             {STAGES.map(stage => {
-              const stageDebts = filtered.filter(d => d.stage === stage.key);
+              const stageDebts = filtered.filter(d => d.status === stage.key);
               return (
                 <div
                   key={stage.key}
@@ -319,7 +319,7 @@ export default function CollectionsCRMPage() {
                     <div className="space-y-2 min-h-[120px]">
                       {stageDebts.map(debt => {
                         const c = calc(debt);
-                        const m = memberById(debt.assigned_to);
+                        const m = memberById(debt.assignee_id);
                         const prio = PRIORITIES.find(p => p.key === debt.priority) || PRIORITIES[1];
                         return (
                           <Card
@@ -385,7 +385,7 @@ export default function CollectionsCRMPage() {
           {selected && (() => {
             const c = calc(selected);
             const list = paymentsByDebt[selected.id] || [];
-            const m = memberById(selected.assigned_to);
+            const m = memberById(selected.assignee_id);
             return (
               <div className="space-y-6">
                 <SheetHeader>
@@ -395,7 +395,7 @@ export default function CollectionsCRMPage() {
                     </Avatar>
                     <div className="text-left">
                       <p className="text-base">{selected.client_name}</p>
-                      <p className="text-xs font-normal text-muted-foreground">{selected.client_contact || 'No contact info'}</p>
+                      <p className="text-xs font-normal text-muted-foreground">{selected.contact || 'No contact info'}</p>
                     </div>
                   </SheetTitle>
                 </SheetHeader>
@@ -409,13 +409,13 @@ export default function CollectionsCRMPage() {
                       onClick={() => updateDebt(selected.id, { stage: s.key } as any)}
                       className={cn(
                         "rounded-full border px-3 py-1 text-xs transition-all",
-                        selected.stage === s.key
+                        selected.status === s.key
                           ? "border-primary bg-primary text-primary-foreground"
                           : "border-border/60 text-muted-foreground hover:border-primary/40 hover:text-foreground",
                         !isAdmin && "cursor-default opacity-70"
                       )}
                     >
-                      {selected.stage === s.key && <Check className="mr-1 inline h-3 w-3" />}
+                      {selected.status === s.key && <Check className="mr-1 inline h-3 w-3" />}
                       {s.label}
                     </button>
                   ))}
