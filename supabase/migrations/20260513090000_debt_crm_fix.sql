@@ -58,22 +58,3 @@ DROP TRIGGER IF EXISTS trg_debt_records_updated ON public.debt_records;
 CREATE TRIGGER trg_debt_records_updated
   BEFORE UPDATE ON public.debt_records
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('payment-proofs', 'payment-proofs', false)
-ON CONFLICT (id) DO NOTHING;
-
-DROP POLICY IF EXISTS "Admins read payment proofs" ON storage.objects;
-CREATE POLICY "Admins read payment proofs" ON storage.objects
-  FOR SELECT TO authenticated USING (bucket_id = 'payment-proofs' AND public.is_admin(auth.uid()));
-DROP POLICY IF EXISTS "Admins upload payment proofs" ON storage.objects;
-CREATE POLICY "Admins upload payment proofs" ON storage.objects
-  FOR INSERT TO authenticated WITH CHECK (bucket_id = 'payment-proofs' AND public.is_admin(auth.uid()));
-DROP POLICY IF EXISTS "Admins update payment proofs" ON storage.objects;
-CREATE POLICY "Admins update payment proofs" ON storage.objects
-  FOR UPDATE TO authenticated USING (bucket_id = 'payment-proofs' AND public.is_admin(auth.uid()));
-DROP POLICY IF EXISTS "Admins delete payment proofs" ON storage.objects;
-CREATE POLICY "Admins delete payment proofs" ON storage.objects
-  FOR DELETE TO authenticated USING (bucket_id = 'payment-proofs' AND public.is_admin(auth.uid()));
-
-NOTIFY pgrst, 'reload schema';
