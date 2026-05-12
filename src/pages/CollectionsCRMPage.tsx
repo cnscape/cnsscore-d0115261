@@ -62,12 +62,10 @@ interface TeamMember {
 }
 
 const STAGES = [
-  { key: 'new',         label: 'New',          accent: 'from-slate-500/10 to-transparent' },
-  { key: 'contacted',   label: 'Contacted',    accent: 'from-blue-500/10 to-transparent' },
-  { key: 'in_progress', label: 'In Progress',  accent: 'from-amber-500/10 to-transparent' },
-  { key: 'partial',     label: 'Partial Paid', accent: 'from-orange-500/10 to-transparent' },
-  { key: 'paid',        label: 'Paid',         accent: 'from-emerald-500/10 to-transparent' },
-  { key: 'escalated',   label: 'Escalated',    accent: 'from-rose-500/10 to-transparent' },
+  { key: 'unpaid',       label: 'Unpaid',       accent: 'from-slate-500/10 to-transparent' },
+  { key: 'in_progress',  label: 'In Progress',  accent: 'from-amber-500/10 to-transparent' },
+  { key: 'partial_paid', label: 'Partial Paid', accent: 'from-orange-500/10 to-transparent' },
+  { key: 'paid',         label: 'Paid',         accent: 'from-emerald-500/10 to-transparent' },
 ];
 
 const PRIORITIES = [
@@ -165,11 +163,12 @@ export default function CollectionsCRMPage() {
     if (!user || !nClient.trim() || !nAmount) return;
     const { error } = await (supabase as any).from('debt_records').insert([{
       client_name: nClient.trim(),
-      client_contact: nContact.trim() || null,
+      contact: nContact.trim() || null,
       description: nDesc.trim() || null,
       original_amount: Number(nAmount),
-      commission_percent: Number(nCommission || 10),
-      assigned_to: nAssignee,
+      commission_percentage: Number(nCommission || 10),
+      assignee_id: nAssignee,
+      assignee_name: memberById(nAssignee)?.full_name || null,
       priority: nPriority,
       next_follow_up: nFollowUp || null,
       created_by: user.id,
@@ -190,10 +189,10 @@ export default function CollectionsCRMPage() {
 
   const recomputeStage = async (debt: DebtRecord) => {
     const c = calc(debt);
-    let stage = debt.stage;
-    if (c.status === 'paid') stage = 'paid';
-    else if (c.status === 'partial' && (debt.stage === 'new' || debt.stage === 'contacted')) stage = 'partial';
-    if (stage !== debt.stage) await updateDebt(debt.id, { stage } as any);
+    let status = debt.status;
+    if (c.status === 'paid') status = 'paid';
+    else if (c.status === 'partial' && debt.status === 'unpaid') status = 'partial_paid';
+    if (status !== debt.status) await updateDebt(debt.id, { status } as any);
   };
 
   const addPayment = async () => {
@@ -207,14 +206,14 @@ export default function CollectionsCRMPage() {
       proof_url = path;
     }
     const { error } = await (supabase as any).from('debt_payments').insert([{
-      debt_id: selected.id,
-      amount: Number(pAmount),
+      debt_record_id: selected.id,
+      payment_amount: Number(pAmount),
       payment_date: pDate,
       payment_method: pMethod,
       payment_reference: pRef || null,
-      notes: pNotes || null,
+      payment_note: pNotes || null,
       proof_url,
-      added_by: user?.id,
+      collected_by: user?.id,
     }]);
     if (error) { toast.error(error.message); setPSaving(false); return; }
     toast.success('Payment recorded');
@@ -237,7 +236,7 @@ export default function CollectionsCRMPage() {
 
   const handleDrop = async (stageKey: string) => {
     if (!draggedId) return;
-    await updateDebt(draggedId, { stage: stageKey } as any);
+    await updateDebt(draggedId, { status: stageKey } as any);
     setDraggedId(null);
   };
 
