@@ -446,7 +446,7 @@ export default function CollectionsCRMPage() {
                       <Progress value={c.progress} />
                     </div>
                     <div className="flex items-center justify-between border-t border-border/40 pt-3 text-xs">
-                      <span className="text-muted-foreground">Commission earned ({selected.commission_percent}%)</span>
+                      <span className="text-muted-foreground">Commission earned ({selected.commission_percentage}%)</span>
                       <span className="font-semibold text-primary">R{c.commission.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
                     </div>
                   </CardContent>
@@ -513,8 +513,8 @@ export default function CollectionsCRMPage() {
                   <div className="space-y-1">
                     <p className="text-xs uppercase text-muted-foreground">Commission %</p>
                     {isAdmin ? (
-                      <Input type="number" defaultValue={selected.commission_percent} onBlur={(e) => updateDebt(selected.id, { commission_percent: Number(e.target.value) } as any)} />
-                    ) : (<p>{selected.commission_percent}%</p>)}
+                      <Input type="number" defaultValue={selected.commission_percentage} onBlur={(e) => updateDebt(selected.id, { commission_percentage: Number(e.target.value) } as any)} />
+                    ) : (<p>{selected.commission_percentage}%</p>)}
                   </div>
                 </div>
 
@@ -550,7 +550,7 @@ export default function CollectionsCRMPage() {
                             <div className="rounded-xl border border-border/60 bg-card/60 p-3">
                               <div className="flex items-start justify-between">
                                 <div>
-                                  <p className="font-semibold text-emerald-400">+R{Number(p.amount).toLocaleString()}</p>
+                                  <p className="font-semibold text-emerald-400">+R{Number(p.payment_amount).toLocaleString()}</p>
                                   <p className="text-xs text-muted-foreground">
                                     {format(new Date(p.payment_date), 'PPP')} · {p.payment_method || 'method n/a'}
                                   </p>
@@ -562,7 +562,7 @@ export default function CollectionsCRMPage() {
                                 )}
                               </div>
                               {p.payment_reference && <p className="mt-1 text-xs">Ref: {p.payment_reference}</p>}
-                              {p.notes && <p className="mt-1 text-xs text-muted-foreground">{p.notes}</p>}
+                              {p.payment_note && <p className="mt-1 text-xs text-muted-foreground">{p.payment_note}</p>}
                               {p.proof_url && (
                                 <a
                                   href="#"
