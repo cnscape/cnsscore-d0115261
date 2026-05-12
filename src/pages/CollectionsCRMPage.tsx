@@ -27,28 +27,31 @@ import { format, formatDistanceToNow } from 'date-fns';
 interface DebtRecord {
   id: string;
   client_name: string;
-  client_contact: string | null;
+  contact: string | null;
   description: string | null;
   original_amount: number;
-  commission_percent: number;
-  assigned_to: string | null;
+  amount_paid: number;
+  outstanding_amount: number;
+  commission_percentage: number;
+  commission_amount: number;
+  assignee_id: string | null;
+  assignee_name: string | null;
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  stage: string;
+  status: string;
   next_follow_up: string | null;
-  notes: string | null;
   created_at: string;
 }
 
 interface DebtPayment {
   id: string;
-  debt_id: string;
-  amount: number;
+  debt_record_id: string;
+  payment_amount: number;
   payment_date: string;
   payment_method: string | null;
   payment_reference: string | null;
-  notes: string | null;
+  payment_note: string | null;
   proof_url: string | null;
-  added_by: string | null;
+  collected_by: string | null;
   created_at: string;
 }
 
@@ -117,7 +120,7 @@ export default function CollectionsCRMPage() {
     setDebts((d as any) || []);
     const grouped: Record<string, DebtPayment[]> = {};
     ((p as any) || []).forEach((row: DebtPayment) => {
-      (grouped[row.debt_id] ||= []).push(row);
+      (grouped[row.debt_record_id] ||= []).push(row);
     });
     setPaymentsByDebt(grouped);
     setTeam((t as any) || []);
@@ -128,10 +131,10 @@ export default function CollectionsCRMPage() {
 
   const calc = (debt: DebtRecord) => {
     const list = paymentsByDebt[debt.id] || [];
-    const paid = list.reduce((s, x) => s + Number(x.amount || 0), 0);
+    const paid = list.reduce((s, x) => s + Number(x.payment_amount || 0), 0);
     const remaining = Math.max(0, Number(debt.original_amount) - paid);
     const progress = debt.original_amount > 0 ? Math.min(100, (paid / Number(debt.original_amount)) * 100) : 0;
-    const commission = paid * (Number(debt.commission_percent) / 100);
+    const commission = paid * (Number(debt.commission_percentage) / 100);
     const status: 'unpaid' | 'partial' | 'paid' =
       paid <= 0 ? 'unpaid' : remaining <= 0.001 ? 'paid' : 'partial';
     return { paid, remaining, progress, commission, status };
@@ -143,7 +146,7 @@ export default function CollectionsCRMPage() {
     return debts.filter(d =>
       d.client_name.toLowerCase().includes(q) ||
       (d.description || '').toLowerCase().includes(q) ||
-      (d.client_contact || '').toLowerCase().includes(q)
+      (d.contact || '').toLowerCase().includes(q)
     );
   }, [debts, search]);
 
