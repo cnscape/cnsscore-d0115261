@@ -28,6 +28,7 @@ import ScoutBookingPage from "./pages/ScoutBookingPage";
 import AdminCalendarsPage from "./pages/AdminCalendarsPage";
 import AdminTeamPerformancePage from "./pages/AdminTeamPerformancePage";
 import CollectionsCRMPage from "./pages/CollectionsCRMPage";
+import AdminKpiTargetsPage from "./pages/AdminKpiTargetsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -77,6 +78,7 @@ function AppRoutes() {
       <Route path="/admin/calendars" element={<ProtectedRoute adminOnly><AdminCalendarsPage /></ProtectedRoute>} />
       <Route path="/admin/performance" element={<ProtectedRoute adminOnly><AdminTeamPerformancePage /></ProtectedRoute>} />
       <Route path="/admin/collections" element={<ProtectedRoute adminOnly><CollectionsCRMPage /></ProtectedRoute>} />
+      <Route path="/admin/kpi-targets" element={<ProtectedRoute adminOnly><AdminKpiTargetsPage /></ProtectedRoute>} />
       <Route path="/collections" element={<ProtectedRoute adminOnly><Navigate to="/admin/collections" replace /></ProtectedRoute>} />
       <Route path="/admin/settings" element={<ProtectedRoute adminOnly><SettingsPage /></ProtectedRoute>} />
       

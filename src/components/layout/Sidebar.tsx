@@ -57,6 +57,7 @@ export function Sidebar() {
     { href: '/admin/team', label: 'Team', icon: Users },
     { href: '/admin/calendars', label: 'Booking System', icon: CalendarDays },
     { href: '/admin/performance', label: 'Team Performance', icon: TrendingUp },
+    { href: '/admin/kpi-targets', label: 'KPI Targets', icon: Target },
     { href: '/admin/collections', label: 'Collections CRM', icon: Wallet },
   ];
 
