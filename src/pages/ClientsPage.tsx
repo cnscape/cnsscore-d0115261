@@ -10,8 +10,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Briefcase, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Briefcase, Loader2, Pencil, Trash2, LayoutDashboard } from 'lucide-react';
 import { toast } from 'sonner';
+import { Link } from 'react-router-dom';
 
 interface Client {
   id: string;
@@ -309,6 +310,9 @@ export default function ClientsPage() {
                       <CardTitle>{selectedClient.name}</CardTitle>
                       <div className="flex items-center gap-2">
                         <Badge>{selectedClient.is_active ? 'Active' : 'Inactive'}</Badge>
+                        <Link to={`/admin/clients/${selectedClient.id}/dashboard`}>
+                          <Button size="sm"><LayoutDashboard className="h-4 w-4 mr-1" />Dashboard</Button>
+                        </Link>
                         <Button variant="outline" size="sm" onClick={startEditing}><Pencil className="h-4 w-4 mr-1" />Edit</Button>
                         <Button variant="outline" size="sm" className="text-destructive" onClick={() => handleDeleteClient(selectedClient.id)}><Trash2 className="h-4 w-4 mr-1" />Delete</Button>
                       </div>
