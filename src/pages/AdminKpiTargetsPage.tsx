@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+const db: any = supabase;
 import { useAuth } from '@/hooks/useAuth';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -61,14 +62,14 @@ export default function AdminKpiTargetsPage() {
   const loadAll = useCallback(async () => {
     setLoading(true);
     const [{ data: pr }, { data: cl }, { data: as }, { data: rb }] = await Promise.all([
-      supabase.from('profiles').select('user_id, full_name').order('full_name'),
-      supabase.from('clients').select('id, name').eq('is_active', true).order('name'),
-      supabase.from('weekly_kpi_assignments').select('*').eq('week_start', weekStart),
-      supabase.from('rep_roadblocks').select('id, rep_id, role, message, suggestion, created_at').order('created_at', { ascending: false }).limit(40),
+      db.from('profiles').select('user_id, full_name').order('full_name'),
+      db.from('clients').select('id, name').eq('is_active', true).order('name'),
+      db.from('weekly_kpi_assignments').select('*').eq('week_start', weekStart),
+      db.from('rep_roadblocks').select('id, rep_id, role, message, suggestion, created_at').order('created_at', { ascending: false }).limit(40),
     ]);
     setReps((pr || []) as Profile[]);
     setClients((cl || []) as Client[]);
-    const list = (as || []) as Assignment[];
+    const list = ((as as any) || []) as Assignment[];
     setAssignments(list);
     setRoadblocks(rb || []);
 
@@ -78,11 +79,11 @@ export default function AdminKpiTargetsPage() {
     const tMap: Record<string, { total: number; done: number }> = {};
     await Promise.all(list.map(async (a) => {
       const [{ data: acts }, { data: deals }, { data: todos }] = await Promise.all([
-        supabase.from('lead_activities').select('activity_type').eq('user_id', a.rep_id)
+        db.from('lead_activities').select('activity_type').eq('user_id', a.rep_id)
           .gte('created_at', weekStart).lt('created_at', weekEnd),
-        supabase.from('deals').select('status').eq('rep_id', a.rep_id).eq('client_id', a.client_id)
+        db.from('deals').select('status').eq('rep_id', a.rep_id).eq('client_id', a.client_id)
           .gte('created_at', weekStart).lt('created_at', weekEnd),
-        supabase.from('weekly_todos').select('is_done').eq('assignment_id', a.id),
+        db.from('weekly_todos').select('is_done').eq('assignment_id', a.id),
       ]);
       const dms = (acts || []).filter((x: any) => x.activity_type === 'dm_sent').length;
       const calls = (acts || []).filter((x: any) => ['call_made','meeting_booked'].includes(x.activity_type)).length;
@@ -103,7 +104,7 @@ export default function AdminKpiTargetsPage() {
   const handleSave = async () => {
     if (!fRep || !fClient) return toast.error('Pick a rep and a client');
     setSaving(true);
-    const { error } = await supabase.from('weekly_kpi_assignments').upsert({
+    const { error } = await db.from('weekly_kpi_assignments').upsert({
       rep_id: fRep, client_id: fClient, week_start: weekStart,
       outreach_dms_target: Number(fDms) || 0,
       calls_booked_target: Number(fCalls) || 0,
