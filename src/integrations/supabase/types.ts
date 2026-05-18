@@ -787,6 +787,44 @@ export type Database = {
           },
         ]
       }
+      rep_roadblocks: {
+        Row: {
+          assignment_id: string | null
+          created_at: string | null
+          id: string
+          message: string
+          rep_id: string
+          role: string
+          suggestion: string | null
+        }
+        Insert: {
+          assignment_id?: string | null
+          created_at?: string | null
+          id?: string
+          message: string
+          rep_id: string
+          role: string
+          suggestion?: string | null
+        }
+        Update: {
+          assignment_id?: string | null
+          created_at?: string | null
+          id?: string
+          message?: string
+          rep_id?: string
+          role?: string
+          suggestion?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rep_roadblocks_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_kpi_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       salesperson_calendars: {
         Row: {
           calendar_link: string
@@ -1101,6 +1139,107 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      weekly_kpi_assignments: {
+        Row: {
+          calls_booked_target: number
+          carried_calls: number
+          carried_deals: number
+          carried_outreach: number
+          client_id: string
+          closed_deals_target: number
+          conversion_rate_target: number
+          created_at: string | null
+          created_by: string | null
+          id: string
+          notes: string | null
+          outreach_dms_target: number
+          rep_id: string
+          updated_at: string | null
+          week_start: string
+        }
+        Insert: {
+          calls_booked_target?: number
+          carried_calls?: number
+          carried_deals?: number
+          carried_outreach?: number
+          client_id: string
+          closed_deals_target?: number
+          conversion_rate_target?: number
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          outreach_dms_target?: number
+          rep_id: string
+          updated_at?: string | null
+          week_start: string
+        }
+        Update: {
+          calls_booked_target?: number
+          carried_calls?: number
+          carried_deals?: number
+          carried_outreach?: number
+          client_id?: string
+          closed_deals_target?: number
+          conversion_rate_target?: number
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          outreach_dms_target?: number
+          rep_id?: string
+          updated_at?: string | null
+          week_start?: string
+        }
+        Relationships: []
+      }
+      weekly_todos: {
+        Row: {
+          assignment_id: string
+          completed_count: number | null
+          created_at: string | null
+          day_of_week: number
+          id: string
+          is_done: boolean | null
+          rep_id: string
+          target_count: number | null
+          task_text: string
+          task_type: string
+        }
+        Insert: {
+          assignment_id: string
+          completed_count?: number | null
+          created_at?: string | null
+          day_of_week: number
+          id?: string
+          is_done?: boolean | null
+          rep_id: string
+          target_count?: number | null
+          task_text: string
+          task_type?: string
+        }
+        Update: {
+          assignment_id?: string
+          completed_count?: number | null
+          created_at?: string | null
+          day_of_week?: number
+          id?: string
+          is_done?: boolean | null
+          rep_id?: string
+          target_count?: number | null
+          task_text?: string
+          task_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_todos_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_kpi_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
