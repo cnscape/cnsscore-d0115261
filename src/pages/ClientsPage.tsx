@@ -37,6 +37,14 @@ interface Offer {
   is_active: boolean;
 }
 
+interface Channel {
+  id: string;
+  client_id: string;
+  name: string;
+  color: string;
+  is_active: boolean;
+}
+
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,6 +53,10 @@ export default function ClientsPage() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [showAddOffer, setShowAddOffer] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [showAddChannel, setShowAddChannel] = useState(false);
+  const [channelName, setChannelName] = useState('');
+  const [channelColor, setChannelColor] = useState('#FF6B35');
 
   // Form state
   const [clientName, setClientName] = useState('');
@@ -71,8 +83,15 @@ export default function ClientsPage() {
     if (data) setOffers(data as Offer[]);
   };
 
+  const fetchChannels = async (clientId: string) => {
+    const { data } = await supabase.from('client_channels' as any).select('*').eq('client_id', clientId).order('sort_order');
+    if (data) setChannels(data as unknown as Channel[]);
+  };
+
   useEffect(() => { fetchClients(); }, []);
-  useEffect(() => { if (selectedClient) fetchOffers(selectedClient.id); }, [selectedClient]);
+  useEffect(() => {
+    if (selectedClient) { fetchOffers(selectedClient.id); fetchChannels(selectedClient.id); }
+  }, [selectedClient]);
 
   const resetForm = () => {
     setClientName(''); setClientIndustry(''); setRevenueModel('revenue_share');
@@ -140,6 +159,30 @@ export default function ClientsPage() {
     toast.success('Offer added!');
     setShowAddOffer(false); setOfferName(''); setTicketSize(0);
     fetchOffers(selectedClient.id);
+  };
+
+  const handleAddChannel = async () => {
+    if (!selectedClient || !channelName.trim()) return;
+    const { error } = await supabase.from('client_channels' as any).insert([{
+      client_id: selectedClient.id, name: channelName.trim(), color: channelColor,
+    }] as any);
+    if (error) { toast.error('Failed: ' + error.message); return; }
+    toast.success('Channel added');
+    setShowAddChannel(false); setChannelName(''); setChannelColor('#FF6B35');
+    fetchChannels(selectedClient.id);
+  };
+
+  const handleToggleChannel = async (ch: Channel) => {
+    const { error } = await supabase.from('client_channels' as any).update({ is_active: !ch.is_active } as any).eq('id', ch.id);
+    if (error) { toast.error('Failed'); return; }
+    fetchChannels(ch.client_id);
+  };
+
+  const handleDeleteChannel = async (ch: Channel) => {
+    if (!confirm(`Remove "${ch.name}"?`)) return;
+    const { error } = await supabase.from('client_channels' as any).delete().eq('id', ch.id);
+    if (error) { toast.error('Failed'); return; }
+    fetchChannels(ch.client_id);
   };
 
   const revenueModelLabels: Record<string, string> = {
