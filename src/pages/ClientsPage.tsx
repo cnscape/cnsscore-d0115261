@@ -363,6 +363,47 @@ export default function ClientsPage() {
                     )}
                   </CardContent>
                 </Card>
+
+                {/* Channels */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">Channels</CardTitle>
+                      <Dialog open={showAddChannel} onOpenChange={setShowAddChannel}>
+                        <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4 mr-1" /> Add Channel</Button></DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader><DialogTitle>Add Channel to {selectedClient.name}</DialogTitle></DialogHeader>
+                          <div className="space-y-4 pt-4">
+                            <div className="space-y-2"><Label>Channel Name</Label><Input value={channelName} onChange={e => setChannelName(e.target.value)} placeholder="e.g. TikTok Inbound, Cold Email" /></div>
+                            <div className="space-y-2"><Label>Color</Label><Input type="color" value={channelColor} onChange={e => setChannelColor(e.target.value)} className="h-10 w-20" /></div>
+                            <Button onClick={handleAddChannel} className="w-full" disabled={!channelName.trim()}>Add Channel</Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {channels.length > 0 ? (
+                      <div className="space-y-2">
+                        {channels.map(ch => (
+                          <div key={ch.id} className="flex items-center justify-between p-3 rounded-lg border border-border">
+                            <div className="flex items-center gap-3">
+                              <span className="h-3 w-3 rounded-full" style={{ backgroundColor: ch.color }} />
+                              <span className="font-medium">{ch.name}</span>
+                              <Badge variant={ch.is_active ? 'default' : 'secondary'}>{ch.is_active ? 'Active' : 'Inactive'}</Badge>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => handleToggleChannel(ch)}>{ch.is_active ? 'Disable' : 'Enable'}</Button>
+                              <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDeleteChannel(ch)}><Trash2 className="h-4 w-4" /></Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">No custom channels yet. Add tailored deal channels for this client.</p>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             ) : (
               <Card><CardContent className="p-12 text-center text-muted-foreground"><Briefcase className="h-12 w-12 mx-auto mb-4 opacity-30" /><p>Select a client to view details and manage offers</p></CardContent></Card>
