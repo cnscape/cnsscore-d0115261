@@ -1,8 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
 import { 
-  LayoutDashboard, ClipboardList, History, Trophy, Settings, Users, Target,
+  LayoutDashboard, ClipboardList, Trophy, Settings, Users, Target,
   LogOut, ChevronLeft, ChevronRight, Briefcase, TrendingUp, DollarSign, 
-  FileText, FolderKanban, Send, Kanban, BookOpen, GraduationCap, UserPlus, Phone, CalendarDays, Wallet
+  FileText, FolderKanban, Send, GraduationCap, UserPlus, Phone, CalendarDays, Wallet
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,13 +22,10 @@ export function Sidebar() {
 
   const salesLinks = [
     { href: '/daily-work', label: 'Daily Work', icon: LayoutDashboard },
-    { href: '/crm', label: 'CRM Pipeline', icon: Kanban },
     { href: '/scorecard', label: "Today's Scorecard", icon: ClipboardList },
     { href: '/deals', label: 'My Deals', icon: Briefcase },
     { href: '/my-commission', label: 'My Commission', icon: DollarSign },
-    { href: '/playbook', label: 'Playbook', icon: BookOpen },
     { href: '/training', label: 'Training & SOPs', icon: GraduationCap },
-    { href: '/history', label: 'My History', icon: History },
     { href: '/achievements', label: 'Achievements', icon: Trophy },
     { href: '/settings', label: 'Settings', icon: Settings },
   ];
@@ -36,10 +33,8 @@ export function Sidebar() {
   const scoutLinks = [
     { href: '/daily-work', label: 'Daily Work', icon: LayoutDashboard },
     { href: '/book-call', label: 'Book a Call', icon: Phone },
-    { href: '/crm', label: 'CRM Pipeline', icon: Kanban },
     { href: '/deals', label: 'My Deals', icon: Briefcase },
     { href: '/my-commission', label: 'My Commission', icon: DollarSign },
-    { href: '/playbook', label: 'Playbook', icon: BookOpen },
     { href: '/training', label: 'Training & SOPs', icon: GraduationCap },
     { href: '/achievements', label: 'Achievements', icon: Trophy },
     { href: '/settings', label: 'Settings', icon: Settings },
@@ -49,7 +44,6 @@ export function Sidebar() {
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/daily-update', label: 'Daily Update', icon: Send },
     { href: '/projects', label: 'My Projects', icon: FolderKanban },
-    { href: '/playbook', label: 'Playbook', icon: BookOpen },
     { href: '/training', label: 'Training & SOPs', icon: GraduationCap },
     { href: '/achievements', label: 'Achievements', icon: Trophy },
   ];
@@ -67,7 +61,6 @@ export function Sidebar() {
   ];
 
   const adminToolLinks = [
-    { href: '/admin/playbook', label: 'Playbook', icon: BookOpen },
     { href: '/admin/training', label: 'Training & SOPs', icon: GraduationCap },
     { href: '/admin/settings', label: 'Settings', icon: Settings },
   ];

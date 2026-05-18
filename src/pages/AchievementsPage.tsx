@@ -6,6 +6,8 @@ import { AchievementBadge } from '@/components/ui/achievement-badge';
 import { XPProgress } from '@/components/ui/xp-progress';
 import { Achievement, UserAchievement } from '@/lib/supabase-types';
 import { Loader2, Trophy } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import HistoryPage from './HistoryPage';
 
 export default function AchievementsPage() {
   const { user, profile } = useAuth();
@@ -79,6 +81,13 @@ export default function AchievementsPage() {
           )}
         </div>
 
+        <Tabs defaultValue="achievements" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="achievements">Achievements</TabsTrigger>
+            <TabsTrigger value="history">My History</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="achievements" className="space-y-8">
         {/* Earned Achievements */}
         {earnedAchievements.length > 0 && (
           <div>
@@ -121,6 +130,12 @@ export default function AchievementsPage() {
             </div>
           </div>
         )}
+          </TabsContent>
+
+          <TabsContent value="history">
+            <HistoryPage embedded />
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );

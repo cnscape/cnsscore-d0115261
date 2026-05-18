@@ -54,7 +54,7 @@ const STAGES = [
   { key: 'closed_lost', label: 'Closed Lost', color: 'bg-destructive/20' },
 ];
 
-export default function CRMPipelinePage() {
+export default function CRMPipelinePage({ embedded = false }: { embedded?: boolean }) {
   const { user, isAdmin } = useAuth();
   const [leads, setLeads] = useState<PipelineLead[]>([]);
   const [activities, setActivities] = useState<LeadActivity[]>([]);
@@ -170,12 +170,12 @@ export default function CRMPipelinePage() {
   };
 
   if (isLoading) {
-    return <AppLayout><div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></AppLayout>;
+    const loader = <div className="flex items-center justify-center h-full py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+    return embedded ? loader : <AppLayout>{loader}</AppLayout>;
   }
 
-  return (
-    <AppLayout>
-      <div className="p-6 lg:p-8 space-y-6">
+  const body = (
+    <div className={embedded ? 'space-y-6' : 'p-6 lg:p-8 space-y-6'}>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">CRM Pipeline</h1>
@@ -396,7 +396,7 @@ export default function CRMPipelinePage() {
             </Tabs>
           </DialogContent>
         </Dialog>
-      </div>
-    </AppLayout>
+    </div>
   );
+  return embedded ? body : <AppLayout>{body}</AppLayout>;
 }

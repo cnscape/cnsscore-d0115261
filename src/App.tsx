@@ -21,9 +21,7 @@ import DailyUpdatePage from "./pages/DailyUpdatePage";
 import ProjectsPage from "./pages/ProjectsPage";
 import SettingsPage from "./pages/SettingsPage";
 import MyCommissionPage from "./pages/MyCommissionPage";
-import CRMPipelinePage from "./pages/CRMPipelinePage";
 import DailyWorkPage from "./pages/DailyWorkPage";
-import PlaybookPage from "./pages/PlaybookPage";
 import TrainingPage from "./pages/TrainingPage";
 import AdminLeadsPage from "./pages/AdminLeadsPage";
 import ScoutBookingPage from "./pages/ScoutBookingPage";
@@ -54,15 +52,14 @@ function AppRoutes() {
       {/* Shared routes */}
       <Route path="/dashboard" element={<ProtectedRoute><RepDashboard /></ProtectedRoute>} />
       <Route path="/daily-work" element={<ProtectedRoute><DailyWorkPage /></ProtectedRoute>} />
-      <Route path="/crm" element={<ProtectedRoute><CRMPipelinePage /></ProtectedRoute>} />
+      <Route path="/crm" element={<ProtectedRoute><Navigate to="/deals" replace /></ProtectedRoute>} />
       <Route path="/book-call" element={<ProtectedRoute><ScoutBookingPage /></ProtectedRoute>} />
       <Route path="/scorecard" element={<ProtectedRoute><ScorecardPage /></ProtectedRoute>} />
       <Route path="/deals" element={<ProtectedRoute><DealsPage /></ProtectedRoute>} />
       <Route path="/my-commission" element={<ProtectedRoute><MyCommissionPage /></ProtectedRoute>} />
-      <Route path="/playbook" element={<ProtectedRoute><PlaybookPage /></ProtectedRoute>} />
       <Route path="/training" element={<ProtectedRoute><TrainingPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-      <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
+      <Route path="/history" element={<ProtectedRoute><Navigate to="/achievements" replace /></ProtectedRoute>} />
       <Route path="/achievements" element={<ProtectedRoute><AchievementsPage /></ProtectedRoute>} />
       
       {/* Growth Team routes */}
@@ -76,7 +73,6 @@ function AppRoutes() {
       <Route path="/admin/campaigns" element={<ProtectedRoute adminOnly><CampaignsPage /></ProtectedRoute>} />
       <Route path="/admin/team" element={<ProtectedRoute adminOnly><TeamPage /></ProtectedRoute>} />
       <Route path="/admin/leads" element={<ProtectedRoute adminOnly><AdminLeadsPage /></ProtectedRoute>} />
-      <Route path="/admin/playbook" element={<ProtectedRoute adminOnly><PlaybookPage /></ProtectedRoute>} />
       <Route path="/admin/training" element={<ProtectedRoute adminOnly><TrainingPage /></ProtectedRoute>} />
       <Route path="/admin/calendars" element={<ProtectedRoute adminOnly><AdminCalendarsPage /></ProtectedRoute>} />
       <Route path="/admin/performance" element={<ProtectedRoute adminOnly><AdminTeamPerformancePage /></ProtectedRoute>} />

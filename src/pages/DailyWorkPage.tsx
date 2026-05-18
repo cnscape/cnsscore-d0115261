@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { StatCard } from '@/components/ui/stat-card';
 import { Loader2, MessageSquare, Clock, AlertTriangle, ArrowRight, Phone, Send, CheckCircle } from 'lucide-react';
+import { Sparkles, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow, differenceInHours } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -30,6 +31,31 @@ export default function DailyWorkPage() {
   const navigate = useNavigate();
   const [leads, setLeads] = useState<PipelineLead[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [plan, setPlan] = useState<string>('');
+  const [planLoading, setPlanLoading] = useState(false);
+
+  const fetchPlan = useCallback(async () => {
+    if (!user) return;
+    setPlanLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('daily-work-coach', { body: {} });
+      if (error) throw error;
+      const text = (data as any)?.plan || (data as any)?.error || 'No plan available.';
+      setPlan(text);
+      localStorage.setItem(`plan_${user.id}_${new Date().toDateString()}`, text);
+    } catch (e: any) {
+      setPlan('Could not generate plan right now. ' + (e?.message || ''));
+    } finally {
+      setPlanLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const cached = localStorage.getItem(`plan_${user.id}_${new Date().toDateString()}`);
+    if (cached) setPlan(cached);
+    else fetchPlan();
+  }, [user, fetchPlan]);
 
   const fetchLeads = useCallback(async () => {
     if (!user) return;
@@ -120,6 +146,28 @@ export default function DailyWorkPage() {
           <h1 className="text-3xl font-bold">Daily Work</h1>
           <p className="text-muted-foreground">Your task engine — take action on your leads</p>
         </div>
+
+        {/* AI Plan of Action */}
+        <Card className="border-primary/40 bg-gradient-to-br from-primary/10 via-background to-background">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" /> AI Plan of Action
+              </CardTitle>
+              <Button variant="ghost" size="sm" onClick={fetchPlan} disabled={planLoading}>
+                {planLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                <span className="ml-2">Refresh</span>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {planLoading && !plan ? (
+              <div className="text-sm text-muted-foreground">Coaching you to hit your KPIs…</div>
+            ) : (
+              <div className="text-sm whitespace-pre-line leading-relaxed">{plan}</div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Quick Stats */}
         <div className="grid gap-4 md:grid-cols-4">

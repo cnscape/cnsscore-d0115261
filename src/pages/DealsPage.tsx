@@ -16,6 +16,8 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { SearchableClientSelect } from '@/components/deals/SearchableClientSelect';
 import { LeadContactInput, validateLeadContact } from '@/components/deals/LeadContactInput';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import CRMPipelinePage from './CRMPipelinePage';
 
 interface Deal {
   id: string;
@@ -62,12 +64,20 @@ interface Campaign {
   name: string;
 }
 
+interface ClientChannel {
+  id: string;
+  client_id: string;
+  name: string;
+  color: string | null;
+}
+
 export default function DealsPage({ adminView = false }: { adminView?: boolean }) {
   const { user, isAdmin } = useAuth();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [channels, setChannels] = useState<ClientChannel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddDeal, setShowAddDeal] = useState(false);
   const [filterClient, setFilterClient] = useState('all');
@@ -93,14 +103,16 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
 
   const fetchData = async () => {
     setIsLoading(true);
-    const [clientsRes, offersRes, campaignsRes] = await Promise.all([
+    const [clientsRes, offersRes, campaignsRes, channelsRes] = await Promise.all([
       supabase.from('clients').select('id, name, revenue_share_percent, requires_link').eq('is_active', true),
       supabase.from('offers').select('id, client_id, name, ticket_size, default_commission_percent').eq('is_active', true),
       supabase.from('campaigns').select('id, name').eq('is_active', true),
+      supabase.from('client_channels' as any).select('id, client_id, name, color').eq('is_active', true),
     ]);
     if (clientsRes.data) setClients(clientsRes.data as unknown as Client[]);
     if (offersRes.data) setOffers(offersRes.data as Offer[]);
     if (campaignsRes.data) setCampaigns(campaignsRes.data as Campaign[]);
+    if (channelsRes.data) setChannels(channelsRes.data as unknown as ClientChannel[]);
 
     let dealsQuery = supabase
       .from('deals')
@@ -223,6 +235,7 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
   };
 
   const clientOffers = offers.filter(o => o.client_id === selectedClientId);
+  const clientChannels = channels.filter(c => c.client_id === selectedClientId);
   const canEditDeal = (deal: Deal) => user && (deal.rep_id === user.id || isAdmin);
 
   if (isLoading) {
@@ -300,15 +313,28 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
                     <Select value={channel} onValueChange={setChannel}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="organic">Organic</SelectItem>
-                        <SelectItem value="paid">Paid / Ads</SelectItem>
-                        <SelectItem value="dream_100">Dream 100</SelectItem>
-                        <SelectItem value="event">Event</SelectItem>
-                        <SelectItem value="affiliate">Affiliate</SelectItem>
-                        <SelectItem value="referral">Referral</SelectItem>
-                        <SelectItem value="other">Other / Inbound</SelectItem>
+                        {clientChannels.length > 0 ? clientChannels.map(c => (
+                          <SelectItem key={c.id} value={c.name}>
+                            <span className="inline-flex items-center gap-2">
+                              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: c.color || '#FF6B35' }} />
+                              {c.name}
+                            </span>
+                          </SelectItem>
+                        )) : (
+                          <>
+                            <SelectItem value="organic">Organic</SelectItem>
+                            <SelectItem value="paid">Paid / Ads</SelectItem>
+                            <SelectItem value="dream_100">Dream 100</SelectItem>
+                            <SelectItem value="event">Event</SelectItem>
+                            <SelectItem value="referral">Referral</SelectItem>
+                            <SelectItem value="other">Other / Inbound</SelectItem>
+                          </>
+                        )}
                       </SelectContent>
                     </Select>
+                    {selectedClientId && clientChannels.length === 0 && (
+                      <p className="text-xs text-muted-foreground">No custom channels for this client. Admin can add them in Clients.</p>
+                    )}
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
@@ -348,6 +374,17 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
         </div>
 
         {/* Summary cards */}
+        <Tabs defaultValue="pipeline" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="pipeline">Pipeline (Kanban)</TabsTrigger>
+            <TabsTrigger value="closed">Closed Deals</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="pipeline" className="space-y-6">
+            <CRMPipelinePage embedded />
+          </TabsContent>
+
+          <TabsContent value="closed" className="space-y-6">
         <div className="grid gap-4 md:grid-cols-4">
           <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Total Deals</p><p className="text-2xl font-bold">{filteredDeals.length}</p></CardContent></Card>
           <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Total Revenue</p><p className="text-2xl font-bold text-primary">R{filteredDeals.filter(d => d.status === 'won').reduce((s, d) => s + (d.revenue || 0), 0).toLocaleString()}</p></CardContent></Card>
@@ -449,6 +486,8 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
             </TableBody>
           </Table>
         </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );
