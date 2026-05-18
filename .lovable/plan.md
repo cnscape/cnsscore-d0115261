@@ -1,54 +1,52 @@
-# Dashboard Refactor & AI Daily Work Engine
+# Admin KPI Targets, AI Weekly To-Dos, Carry-Over & Roadblocks
 
-## 1. Navigation & Module Cleanup
+Build an admin-driven KPI + AI coaching system that assigns weekly targets per (client, team member), generates daily to-dos with AI, carries unmet work into next week, captures rep roadblocks via chat, and surfaces it all on an admin dashboard.
 
-- **Remove Playbook module** entirely:
-  - Delete sidebar links (`/playbook`, `/admin/playbook`) for all roles
-  - Remove routes from `App.tsx`
-  - Delete `PlaybookPage.tsx`
-- **Nest History under Achievements**:
-  - Remove standalone `/history` link from sidebars
-  - Add a tabbed view inside `AchievementsPage` with "Achievements" + "History" tabs (reuse existing `HistoryPage` content as a tab panel)
-- **Move Kanban into My Deals**:
-  - `DealsPage` becomes a tabbed view: "Pipeline (Kanban)" tab embedding the CRM board + "Closed Deals" tab with the existing deals list
-  - Remove the standalone "CRM Pipeline" sidebar link (or keep redirect to `/deals`)
+## 1. Database (new migration)
 
-## 2. Custom Client Channels (Admin-Managed)
+- **`weekly_kpi_assignments`** — admin-set weekly targets per (rep, client, week_start)
+  - `id, rep_id, client_id, week_start (date, Monday), outreach_dms_target, calls_booked_target, conversion_rate_target, closed_deals_target, carried_outreach, carried_calls, carried_deals, notes, created_by, created_at, updated_at`
+  - Unique (rep_id, client_id, week_start)
+- **`weekly_todos`** — AI-generated daily task items
+  - `id, assignment_id, rep_id, day_of_week (0–6), task_text, task_type (dm|call|follow_up|admin|other), target_count, completed_count, is_done, created_at`
+- **`rep_roadblocks`** — rep ↔ AI coach chat log
+  - `id, rep_id, assignment_id (nullable), role (user|assistant), message, suggestion (text, nullable), created_at`
+- RLS: admins manage all; reps read/update own rows; reps can insert own roadblock messages.
+- Helper view / SQL function `get_week_actuals(rep_id, client_id, week_start)` to count DMs (`lead_activities` `dm_sent`), calls (`call_made`/`meeting_booked`), closed_won (`deals.status='won'`) for that week.
 
-- **New table `client_channels`**: `id, client_id, name, color, is_active, sort_order, created_at`
-  - RLS: admins manage; authenticated read active
-- **Admin UI**: Add a "Channels" panel inside `ClientsPage` (per-client) — list, add, edit, archive channels with name + color
-- **Deal form refactor**: In `DealsPage` create/edit modal, replace the static `channel` enum dropdown with a dynamic select populated from `client_channels` filtered by selected client
-- Store the channel name in the existing `deals.channel` text field (keep backwards compat — it's already a USER-DEFINED enum; we'll switch the column to `text` via migration so any client-defined channel name is allowed)
+## 2. Edge Functions (Lovable AI Gateway, `google/gemini-3-flash-preview`)
 
-## 3. Admin KPI Controls + Weekly Trends
+- **`generate-weekly-todos`** — input `{ assignment_id }`. Loads targets + carry-overs, asks AI for a Mon–Fri actionable daily plan, persists `weekly_todos` rows.
+- **`carry-over-kpis`** — input `{ rep_id, client_id, week_start }`. Computes previous-week actuals vs targets, writes a new `weekly_kpi_assignments` row for the next Monday with `carried_*` deltas, then calls `generate-weekly-todos`.
+- **`rep-roadblock-chat`** — input `{ message, assignment_id? }`. Logs user message, sends full thread + KPI context to AI, returns + persists assistant suggestion.
 
-- Use the existing `kpi_targets` table (already supports per-rep, metric_name, target_value, period)
-- **Admin page** (extend `AdminTeamPerformancePage` or add small editor): pick rep → set targets for the four metrics (`outreach_dms`, `calls_conducted`, `deals_closed`, `close_rate`) with sensible defaults (35, 10, 8, 25)
-- **Weekly trend visualization**: Add a 4-week sparkline/bar chart per metric on the rep's performance view, computed from `lead_activities` (DMs/calls), `deals` (closed), and ratio for close rate
+## 3. Admin UI — new page `/admin/kpi-targets`
 
-## 4. AI Daily Work Coach
+- Sidebar link "KPI Targets" (admin only).
+- **Assignment editor**: searchable rep picker + client picker + week selector → form with the 4 targets → Save. Then "Generate Weekly To-Dos" button calls the edge function.
+- **Assignments table**: this week's assignments with progress bars (target vs actual), completion % of to-dos, status chips.
+- **Trends**: 4-week mini bar chart per assignment (recharts).
+- **Roadblocks panel**: latest rep messages + AI suggestions, filterable by rep.
 
-- **Edge function** `daily-work-coach` (Lovable AI Gateway, model `google/gemini-3-flash-preview`):
-  - Input: user_id
-  - Server-side fetches: pipeline_leads counts by stage, this-week activity counts, KPI targets, gap to target
-  - Output: short personalized "Plan of Action" markdown (3–5 bullet next-actions to hit KPIs)
-- **UI**: Add a "Plan of Action" card at the top of `DailyWorkPage` (above the 4 stat cards) with refresh button, loading shimmer, markdown rendering. Auto-fetches on mount and once per day cache in localStorage.
+## 4. Rep UI
 
-## 5. Visual Polish
+- **DailyWorkPage**: add a "This Week's Plan" card listing today's AI to-dos with checkboxes (toggles `is_done`, increments `completed_count`).
+- **"Talk to AI Coach" drawer**: chat thread powered by `rep-roadblock-chat`; shows past conversations + suggestions.
 
-- Keep dark theme; ensure primary CTAs ("+ Add Client", "+ Add Offer", "Go to CRM", "Refresh Plan") use existing primary token (already orange-ish in the design system)
-- Rounded status badges already in use — verify Active/Inactive badge styling on Clients & Channels lists
-- Card-based KPI trend tiles with mini bar charts (recharts is already a project dep)
+## 5. Visual style
+
+- Keep operator-dark + International Orange accents. Use existing `Card`, `Badge`, `Progress`, `Tabs` primitives. Priority/status chips use existing tokens. Charts via recharts.
 
 ## Technical Notes
 
-- New migration: create `client_channels` table + RLS; alter `deals.channel` from enum to text (preserve data with `USING channel::text`)
-- New edge function: `supabase/functions/daily-work-coach/index.ts` using `@ai-sdk/openai-compatible` + `streamText`/`generateText` via Lovable AI Gateway
-- Files touched: `App.tsx`, `Sidebar.tsx`, `DealsPage.tsx`, `AchievementsPage.tsx`, `ClientsPage.tsx`, `AdminTeamPerformancePage.tsx`, `DailyWorkPage.tsx`; delete `PlaybookPage.tsx`
-- No changes to existing data; backwards compatible
+- Week start = Monday (ISO). Compute server-side in edge functions to avoid TZ drift; client passes a date and server snaps to Monday.
+- AI prompts return strict JSON (use AI SDK `Output.object` or `response_format: json_object`) so we can persist structured to-dos reliably.
+- Carry-over rule: `carried_x = max(0, target_x + previous_carried_x - actual_x)`.
+- All AI calls go through Lovable AI Gateway with `LOVABLE_API_KEY` (already provisioned). Handle 429/402 with user-facing toasts.
+- Files: migration `2026xxxx_kpi_todos_roadblocks.sql`; functions `generate-weekly-todos`, `carry-over-kpis`, `rep-roadblock-chat`; pages `AdminKpiTargetsPage.tsx`; edits to `App.tsx`, `Sidebar.tsx`, `DailyWorkPage.tsx`.
 
 ## Out of Scope (confirm if you want included)
 
-- Rebuilding `CRMPipelinePage` — will be embedded as-is inside Deals tab
-- Changing existing color tokens — sticking with current orange primary
+- Automated cron to auto-run carry-over each Monday (manual "Roll Over Week" button for now).
+- Per-client (non-rep) KPI dashboards separate from the rep assignments.
+- Email/Slack alerts when KPIs miss/exceed (in-app alert card only).
