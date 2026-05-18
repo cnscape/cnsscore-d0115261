@@ -9,7 +9,7 @@ import { Campaign, ScorecardWithCampaign, Target } from '@/lib/supabase-types';
 import { format, subDays } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 
-export default function HistoryPage() {
+export default function HistoryPage({ embedded = false }: { embedded?: boolean }) {
   const { user } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedCampaign, setSelectedCampaign] = useState<string>('all');
@@ -82,18 +82,16 @@ export default function HistoryPage() {
   };
 
   if (isLoading) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center h-full">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </div>
-      </AppLayout>
+    const loader = (
+      <div className="flex items-center justify-center h-full py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
     );
+    return embedded ? loader : <AppLayout>{loader}</AppLayout>;
   }
 
-  return (
-    <AppLayout>
-      <div className="p-6 lg:p-8 space-y-6">
+  const body = (
+    <div className={embedded ? 'space-y-6' : 'p-6 lg:p-8 space-y-6'}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">My History</h1>
@@ -182,7 +180,7 @@ export default function HistoryPage() {
             </Table>
           </div>
         )}
-      </div>
-    </AppLayout>
+    </div>
   );
+  return embedded ? body : <AppLayout>{body}</AppLayout>;
 }
