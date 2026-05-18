@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Sparkles, RefreshCw, Target, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Loader2, Sparkles, RefreshCw, Target, AlertTriangle, CheckCircle2, MessageSquare, Bot, User } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Profile { user_id: string; full_name: string }
@@ -58,6 +58,7 @@ export default function AdminKpiTargetsPage() {
 
   // roadblocks
   const [roadblocks, setRoadblocks] = useState<any[]>([]);
+  const [selectedRepChat, setSelectedRepChat] = useState<string | null>(null);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -65,7 +66,7 @@ export default function AdminKpiTargetsPage() {
       db.from('profiles').select('user_id, full_name').order('full_name'),
       db.from('clients').select('id, name').eq('is_active', true).order('name'),
       db.from('weekly_kpi_assignments').select('*').eq('week_start', weekStart),
-      db.from('rep_roadblocks').select('id, rep_id, role, message, suggestion, created_at').order('created_at', { ascending: false }).limit(40),
+      db.from('rep_roadblocks').select('id, rep_id, role, message, suggestion, created_at').order('created_at', { ascending: true }).limit(500),
     ]);
     setReps((pr || []) as Profile[]);
     setClients((cl || []) as Client[]);
@@ -158,7 +159,7 @@ export default function AdminKpiTargetsPage() {
           <TabsList>
             <TabsTrigger value="assign">Assign Targets</TabsTrigger>
             <TabsTrigger value="dashboard">Dashboard ({assignments.length})</TabsTrigger>
-            <TabsTrigger value="roadblocks">Roadblocks ({roadblocks.length})</TabsTrigger>
+          <TabsTrigger value="roadblocks">AI Conversations ({roadblocks.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="assign" className="mt-4">
@@ -247,20 +248,64 @@ export default function AdminKpiTargetsPage() {
               })}
           </TabsContent>
 
-          <TabsContent value="roadblocks" className="mt-4 space-y-3">
-            {roadblocks.length === 0 ? (
-              <Card><CardContent className="py-10 text-center text-muted-foreground">No roadblocks reported yet.</CardContent></Card>
-            ) : roadblocks.map(r => (
-              <Card key={r.id}>
-                <CardContent className="py-3">
-                  <div className="flex items-center justify-between text-xs mb-1">
-                    <span className="font-medium">{repName(r.rep_id)}</span>
-                    <Badge variant={r.role === 'assistant' ? 'default' : 'outline'}>{r.role === 'assistant' ? 'AI suggestion' : 'Rep'}</Badge>
-                  </div>
-                  <p className="text-sm whitespace-pre-line">{r.message}</p>
-                </CardContent>
-              </Card>
-            ))}
+          <TabsContent value="roadblocks" className="mt-4">
+            {(() => {
+              const byRep = new Map<string, any[]>();
+              roadblocks.forEach((r) => {
+                if (!byRep.has(r.rep_id)) byRep.set(r.rep_id, []);
+                byRep.get(r.rep_id)!.push(r);
+              });
+              const repIds = Array.from(byRep.keys());
+              if (repIds.length === 0) {
+                return <Card><CardContent className="py-10 text-center text-muted-foreground">No AI conversations yet.</CardContent></Card>;
+              }
+              const active = selectedRepChat ?? repIds[0];
+              const thread = byRep.get(active) || [];
+              const lastMsg = (id: string) => {
+                const arr = byRep.get(id) || [];
+                return arr[arr.length - 1];
+              };
+              return (
+                <div className="grid gap-4 md:grid-cols-[260px_1fr]">
+                  <Card>
+                    <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><MessageSquare className="h-4 w-4" />Reps</CardTitle></CardHeader>
+                    <CardContent className="p-2 space-y-1 max-h-[600px] overflow-y-auto">
+                      {repIds.map((id) => {
+                        const last = lastMsg(id);
+                        return (
+                          <button key={id} onClick={() => setSelectedRepChat(id)}
+                            className={`w-full text-left rounded-md px-3 py-2 transition-colors ${active === id ? 'bg-primary/15 border border-primary/40' : 'hover:bg-muted'}`}>
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-sm">{repName(id)}</span>
+                              <Badge variant="outline" className="text-[10px]">{(byRep.get(id) || []).length}</Badge>
+                            </div>
+                            <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{last?.message}</p>
+                          </button>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2 border-b border-border">
+                      <CardTitle className="text-base">{repName(active)} ↔ AI Coach</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 space-y-3 max-h-[600px] overflow-y-auto">
+                      {thread.map((m) => (
+                        <div key={m.id} className={`flex gap-2 ${m.role === 'assistant' ? '' : 'flex-row-reverse'}`}>
+                          <div className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 ${m.role === 'assistant' ? 'bg-primary/20 text-primary' : 'bg-muted'}`}>
+                            {m.role === 'assistant' ? <Bot className="h-4 w-4" /> : <User className="h-4 w-4" />}
+                          </div>
+                          <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm whitespace-pre-line ${m.role === 'assistant' ? 'bg-card border border-border' : 'bg-primary/15 border border-primary/30'}`}>
+                            {m.message}
+                            <div className="text-[10px] text-muted-foreground mt-1">{new Date(m.created_at).toLocaleString()}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </div>
+              );
+            })()}
           </TabsContent>
         </Tabs>
       </div>
