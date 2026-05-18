@@ -374,6 +374,17 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
         </div>
 
         {/* Summary cards */}
+        <Tabs defaultValue="pipeline" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="pipeline">Pipeline (Kanban)</TabsTrigger>
+            <TabsTrigger value="closed">Closed Deals</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="pipeline" className="space-y-6">
+            <CRMPipelinePage embedded />
+          </TabsContent>
+
+          <TabsContent value="closed" className="space-y-6">
         <div className="grid gap-4 md:grid-cols-4">
           <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Total Deals</p><p className="text-2xl font-bold">{filteredDeals.length}</p></CardContent></Card>
           <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">Total Revenue</p><p className="text-2xl font-bold text-primary">R{filteredDeals.filter(d => d.status === 'won').reduce((s, d) => s + (d.revenue || 0), 0).toLocaleString()}</p></CardContent></Card>
@@ -475,6 +486,8 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
             </TableBody>
           </Table>
         </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );
