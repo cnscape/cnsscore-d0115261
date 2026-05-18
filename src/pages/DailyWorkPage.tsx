@@ -8,6 +8,10 @@ import { Badge } from '@/components/ui/badge';
 import { StatCard } from '@/components/ui/stat-card';
 import { Loader2, MessageSquare, Clock, AlertTriangle, ArrowRight, Phone, Send, CheckCircle } from 'lucide-react';
 import { Sparkles, RefreshCw } from 'lucide-react';
+import { MessageCircle, ListChecks } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { formatDistanceToNow, differenceInHours } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -33,6 +37,57 @@ export default function DailyWorkPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [plan, setPlan] = useState<string>('');
   const [planLoading, setPlanLoading] = useState(false);
+  const [todos, setTodos] = useState<any[]>([]);
+  const [coachOpen, setCoachOpen] = useState(false);
+  const [coachThread, setCoachThread] = useState<any[]>([]);
+  const [coachInput, setCoachInput] = useState('');
+  const [coachSending, setCoachSending] = useState(false);
+
+  const db: any = supabase;
+
+  const loadTodos = useCallback(async () => {
+    if (!user) return;
+    const today = new Date();
+    const dow = today.getDay(); // 0=Sun .. 6=Sat
+    const { data } = await db.from('weekly_todos').select('*')
+      .eq('rep_id', user.id).eq('day_of_week', dow)
+      .order('created_at');
+    setTodos(data || []);
+  }, [user]);
+
+  const loadCoach = useCallback(async () => {
+    if (!user) return;
+    const { data } = await db.from('rep_roadblocks').select('*')
+      .eq('rep_id', user.id).order('created_at').limit(50);
+    setCoachThread(data || []);
+  }, [user]);
+
+  useEffect(() => { loadTodos(); loadCoach(); }, [loadTodos, loadCoach]);
+
+  const toggleTodo = async (t: any) => {
+    const next = !t.is_done;
+    await db.from('weekly_todos').update({ is_done: next, completed_count: next ? (t.target_count || 1) : 0 }).eq('id', t.id);
+    loadTodos();
+  };
+
+  const sendCoach = async () => {
+    if (!coachInput.trim() || !user) return;
+    setCoachSending(true);
+    const msg = coachInput.trim();
+    setCoachInput('');
+    setCoachThread(prev => [...prev, { id: 'temp-' + Date.now(), role: 'user', message: msg, created_at: new Date().toISOString() }]);
+    try {
+      const { data, error } = await supabase.functions.invoke('rep-roadblock-chat', { body: { message: msg } });
+      if (error) throw error;
+      const reply = (data as any)?.reply || '...';
+      setCoachThread(prev => [...prev, { id: 'temp-r-' + Date.now(), role: 'assistant', message: reply, created_at: new Date().toISOString() }]);
+    } catch (e: any) {
+      toast.error(e?.message || 'Coach unavailable');
+    } finally {
+      setCoachSending(false);
+      loadCoach();
+    }
+  };
 
   const fetchPlan = useCallback(async () => {
     if (!user) return;
@@ -146,6 +201,54 @@ export default function DailyWorkPage() {
           <h1 className="text-3xl font-bold">Daily Work</h1>
           <p className="text-muted-foreground">Your task engine — take action on your leads</p>
         </div>
+
+        {/* This Week's AI Plan + Coach */}
+        <Card>
+          <CardHeader className="pb-3 flex flex-row items-center justify-between">
+            <CardTitle className="text-lg flex items-center gap-2"><ListChecks className="h-5 w-5 text-primary" /> Today's AI To-Dos</CardTitle>
+            <Sheet open={coachOpen} onOpenChange={setCoachOpen}>
+              <SheetTrigger asChild>
+                <Button size="sm" variant="outline"><MessageCircle className="h-4 w-4 mr-2" />Talk to AI Coach</Button>
+              </SheetTrigger>
+              <SheetContent className="w-[420px] sm:w-[480px] flex flex-col">
+                <SheetHeader><SheetTitle>AI Coach</SheetTitle></SheetHeader>
+                <div className="flex-1 overflow-y-auto py-4 space-y-3">
+                  {coachThread.length === 0 && <p className="text-sm text-muted-foreground">Tell the coach what's blocking you. Logged for your admin.</p>}
+                  {coachThread.map(m => (
+                    <div key={m.id} className={`rounded-lg p-3 text-sm ${m.role === 'assistant' ? 'bg-primary/10 border border-primary/30' : 'bg-muted'}`}>
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">{m.role === 'assistant' ? 'Coach' : 'You'}</div>
+                      <div className="whitespace-pre-line">{m.message}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="border-t pt-3 flex gap-2">
+                  <Input placeholder="e.g. Leads aren't responding…" value={coachInput} onChange={(e) => setCoachInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') sendCoach(); }} disabled={coachSending} />
+                  <Button onClick={sendCoach} disabled={coachSending || !coachInput.trim()}>
+                    {coachSending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send'}
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </CardHeader>
+          <CardContent>
+            {todos.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No AI to-dos for today. Your admin can generate them from KPI Targets.</p>
+            ) : (
+              <ul className="space-y-2">
+                {todos.map(t => (
+                  <li key={t.id} className="flex items-start gap-3 rounded-md border border-border p-2">
+                    <Checkbox checked={t.is_done} onCheckedChange={() => toggleTodo(t)} className="mt-0.5" />
+                    <div className="flex-1">
+                      <p className={`text-sm ${t.is_done ? 'line-through text-muted-foreground' : ''}`}>{t.task_text}</p>
+                      <Badge variant="outline" className="text-[10px] mt-1">{t.task_type} · target {t.target_count}</Badge>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
 
         {/* AI Plan of Action */}
         <Card className="border-primary/40 bg-gradient-to-br from-primary/10 via-background to-background">
