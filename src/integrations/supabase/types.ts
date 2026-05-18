@@ -160,6 +160,132 @@ export type Database = {
           },
         ]
       }
+      client_channels: {
+        Row: {
+          client_id: string
+          color: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          client_id: string
+          color?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          client_id?: string
+          color?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_channels_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_credentials: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          label: string
+          notes: string | null
+          password: string | null
+          updated_at: string
+          url: string | null
+          username: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label: string
+          notes?: string | null
+          password?: string | null
+          updated_at?: string
+          url?: string | null
+          username?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string
+          notes?: string | null
+          password?: string | null
+          updated_at?: string
+          url?: string | null
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_credentials_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_drive_docs: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          doc_type: string | null
+          id: string
+          title: string
+          url: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          doc_type?: string | null
+          id?: string
+          title: string
+          url: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          doc_type?: string | null
+          id?: string
+          title?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_drive_docs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           created_at: string | null
@@ -393,6 +519,113 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      debt_payments: {
+        Row: {
+          collected_by: string | null
+          created_at: string
+          debt_record_id: string
+          id: string
+          payment_amount: number
+          payment_date: string
+          payment_method: string | null
+          payment_note: string | null
+          payment_reference: string | null
+          proof_url: string | null
+        }
+        Insert: {
+          collected_by?: string | null
+          created_at?: string
+          debt_record_id: string
+          id?: string
+          payment_amount?: number
+          payment_date?: string
+          payment_method?: string | null
+          payment_note?: string | null
+          payment_reference?: string | null
+          proof_url?: string | null
+        }
+        Update: {
+          collected_by?: string | null
+          created_at?: string
+          debt_record_id?: string
+          id?: string
+          payment_amount?: number
+          payment_date?: string
+          payment_method?: string | null
+          payment_note?: string | null
+          payment_reference?: string | null
+          proof_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debt_payments_debt_record_id_fkey"
+            columns: ["debt_record_id"]
+            isOneToOne: false
+            referencedRelation: "debt_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      debt_records: {
+        Row: {
+          amount_paid: number
+          assignee_id: string | null
+          assignee_name: string | null
+          client_name: string
+          commission_amount: number
+          commission_percentage: number
+          contact: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          next_follow_up: string | null
+          original_amount: number
+          outstanding_amount: number
+          priority: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_paid?: number
+          assignee_id?: string | null
+          assignee_name?: string | null
+          client_name: string
+          commission_amount?: number
+          commission_percentage?: number
+          contact?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          next_follow_up?: string | null
+          original_amount?: number
+          outstanding_amount?: number
+          priority?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_paid?: number
+          assignee_id?: string | null
+          assignee_name?: string | null
+          client_name?: string
+          commission_amount?: number
+          commission_percentage?: number
+          contact?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          next_follow_up?: string | null
+          original_amount?: number
+          outstanding_amount?: number
+          priority?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       gamification_scores: {
         Row: {
@@ -1256,6 +1489,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      recalculate_debt_record: { Args: { _id: string }; Returns: undefined }
       update_streak: { Args: { _user_id: string }; Returns: undefined }
     }
     Enums: {

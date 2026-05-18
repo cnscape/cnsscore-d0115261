@@ -29,6 +29,7 @@ import AdminCalendarsPage from "./pages/AdminCalendarsPage";
 import AdminTeamPerformancePage from "./pages/AdminTeamPerformancePage";
 import CollectionsCRMPage from "./pages/CollectionsCRMPage";
 import AdminKpiTargetsPage from "./pages/AdminKpiTargetsPage";
+import ClientDashboardPage from "./pages/ClientDashboardPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -70,6 +71,8 @@ function AppRoutes() {
       {/* Admin routes */}
       <Route path="/admin" element={<ProtectedRoute adminOnly><AdminDashboard /></ProtectedRoute>} />
       <Route path="/admin/clients" element={<ProtectedRoute adminOnly><ClientsPage /></ProtectedRoute>} />
+      <Route path="/admin/clients/:id/dashboard" element={<ProtectedRoute adminOnly><ClientDashboardPage /></ProtectedRoute>} />
+      <Route path="/clients/:id/dashboard" element={<ProtectedRoute><ClientDashboardPage /></ProtectedRoute>} />
       <Route path="/admin/deals" element={<ProtectedRoute adminOnly><DealsPage adminView /></ProtectedRoute>} />
       <Route path="/admin/campaigns" element={<ProtectedRoute adminOnly><CampaignsPage /></ProtectedRoute>} />
       <Route path="/admin/team" element={<ProtectedRoute adminOnly><TeamPage /></ProtectedRoute>} />
