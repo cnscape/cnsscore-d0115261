@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Briefcase, Loader2, Pencil, Trash2, LayoutDashboard } from 'lucide-react';
+import { Plus, Briefcase, Loader2, Pencil, Trash2, LayoutDashboard, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 
@@ -48,6 +48,7 @@ interface Channel {
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
+  const [leadCounts, setLeadCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [showAddClient, setShowAddClient] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -76,6 +77,13 @@ export default function ClientsPage() {
     setIsLoading(true);
     const { data } = await supabase.from('clients').select('*').order('is_active', { ascending: false }).order('name');
     if (data) setClients(data as unknown as Client[]);
+    // Load lead/deal counts per client
+    const { data: dealRows } = await supabase.from('deals').select('client_id');
+    if (dealRows) {
+      const counts: Record<string, number> = {};
+      (dealRows as any[]).forEach(d => { counts[d.client_id] = (counts[d.client_id] || 0) + 1; });
+      setLeadCounts(counts);
+    }
     setIsLoading(false);
   };
 
@@ -257,7 +265,12 @@ export default function ClientsPage() {
                         <p className="text-xs text-muted-foreground">{client.industry || 'No industry'}</p>
                       </div>
                     </div>
-                    <Badge variant="outline" className="text-xs">{revenueModelLabels[client.revenue_model] || client.revenue_model}</Badge>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant="outline" className="text-xs">{revenueModelLabels[client.revenue_model] || client.revenue_model}</Badge>
+                      <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                        <Users className="h-3 w-3" /> {leadCounts[client.id] || 0} leads
+                      </Badge>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
