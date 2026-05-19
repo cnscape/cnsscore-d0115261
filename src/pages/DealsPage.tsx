@@ -158,7 +158,7 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
     const capeNetoShare = grossRevenue * (client.revenue_share_percent / 100);
     const clientShare = grossRevenue - capeNetoShare;
 
-    const { error } = await supabase.from('deals').insert([{
+    const { data: insertedDeal, error } = await supabase.from('deals').insert([{
       client_id: selectedClientId,
       offer_id: selectedOfferId,
       rep_id: user.id,
@@ -174,7 +174,7 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
       cape_neto_share: capeNetoShare,
       commission_percent: 10,
       rep_commission: 0,
-    } as any]);
+    } as any]).select('id').single();
 
     setIsSubmitting(false);
     if (error) {
@@ -185,7 +185,22 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
       }
       return;
     }
-    toast.success('Deal created! 🎯');
+
+    // Also create a Kanban pipeline lead in the "New Lead" column so it shows up on the board
+    if (insertedDeal?.id) {
+      const { error: leadErr } = await supabase.from('pipeline_leads').insert([{
+        owner_id: user.id,
+        lead_name: leadName.trim(),
+        lead_contact: leadContact.trim() || null,
+        platform: channel === 'organic' ? 'LinkedIn' : channel,
+        lead_score: 'B',
+        stage: 'new_lead',
+        notes: dealNotes || null,
+        deal_id: insertedDeal.id,
+      } as any]);
+      if (leadErr) console.warn('Pipeline lead sync failed', leadErr);
+    }
+    toast.success('Deal created and added to Kanban! 🎯');
     setShowAddDeal(false); resetForm(); fetchData();
   };
 
