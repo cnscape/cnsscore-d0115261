@@ -397,6 +397,7 @@ export default function DailyWorkPage() {
           </Card>
         )}
       </div>
+      <LeadScriptsDialog lead={scriptsLead} open={!!scriptsLead} onOpenChange={(v) => !v && setScriptsLead(null)} />
     </AppLayout>
   );
 }
