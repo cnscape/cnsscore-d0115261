@@ -12,8 +12,14 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, Responsive
 import { format, subDays, startOfWeek, endOfWeek, subWeeks, isWithinInterval } from 'date-fns';
 import {
   Loader2, Users, Target, TrendingUp, Phone, MessageSquare,
-  UserCheck, DollarSign, AlertTriangle, CheckCircle, XCircle, Calendar
+  UserCheck, DollarSign, AlertTriangle, CheckCircle, XCircle, Calendar, Plus, Trash2, UserPlus
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 
 interface MemberProfile {
   id: string;
@@ -97,6 +103,7 @@ function getProgressPercent(actual: number, target: number) {
 }
 
 export default function AdminTeamPerformancePage() {
+  const { user } = useAuth();
   const [profiles, setProfiles] = useState<MemberProfile[]>([]);
   const [roles, setRoles] = useState<MemberRole[]>([]);
   const [deals, setDeals] = useState<DealData[]>([]);
@@ -104,6 +111,22 @@ export default function AdminTeamPerformancePage() {
   const [leads, setLeads] = useState<PipelineData[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+  const [adminTodos, setAdminTodos] = useState<any[]>([]);
+  const [newTodo, setNewTodo] = useState('');
+  const [savingTodo, setSavingTodo] = useState(false);
+
+  // Lead provisioning form
+  const [lpLeadName, setLpLeadName] = useState('');
+  const [lpLeadEmail, setLpLeadEmail] = useState('');
+  const [lpSocials, setLpSocials] = useState('');
+  const [lpPlatform, setLpPlatform] = useState('Instagram');
+  const [lpTier, setLpTier] = useState('B');
+  const [lpAngle, setLpAngle] = useState('');
+  const [lpNotes, setLpNotes] = useState('');
+  const [lpLoom, setLpLoom] = useState('');
+  const [savingLead, setSavingLead] = useState(false);
+
+  const db: any = supabase;
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -131,6 +154,60 @@ export default function AdminTeamPerformancePage() {
     };
     fetchAll();
   }, []);
+
+  const loadAdminTodos = useCallback(async () => {
+    if (!selectedUserId) return;
+    const { data } = await db.from('admin_todos').select('*')
+      .eq('rep_id', selectedUserId).order('created_at', { ascending: false }).limit(50);
+    setAdminTodos(data || []);
+  }, [selectedUserId]);
+
+  useEffect(() => { loadAdminTodos(); }, [loadAdminTodos]);
+
+  const handleAddTodo = async () => {
+    if (!newTodo.trim() || !selectedUserId) return;
+    setSavingTodo(true);
+    const { error } = await db.from('admin_todos').insert([{
+      rep_id: selectedUserId,
+      task_text: newTodo.trim(),
+      created_by: user?.id || null,
+    }]);
+    setSavingTodo(false);
+    if (error) { toast.error('Failed: ' + error.message); return; }
+    toast.success('Objective pushed to agent');
+    setNewTodo('');
+    loadAdminTodos();
+  };
+
+  const handleDeleteTodo = async (id: string) => {
+    await db.from('admin_todos').delete().eq('id', id);
+    loadAdminTodos();
+  };
+
+  const handleProvisionLead = async () => {
+    if (!selectedUserId || !lpLeadName.trim()) {
+      toast.error('Select an agent and enter a lead name');
+      return;
+    }
+    setSavingLead(true);
+    const { error } = await db.from('pipeline_leads').insert([{
+      owner_id: selectedUserId,
+      lead_name: lpLeadName.trim(),
+      lead_email: lpLeadEmail.trim() || null,
+      lead_contact: lpLeadEmail.trim() || null,
+      lead_socials: lpSocials.trim() || null,
+      platform: lpPlatform,
+      lead_score: lpTier,
+      angle: lpAngle.trim() || null,
+      notes: lpNotes.trim() || null,
+      loom_link: lpLoom.trim() || null,
+      stage: 'new_lead',
+    }]);
+    setSavingLead(false);
+    if (error) { toast.error('Failed: ' + error.message); return; }
+    toast.success(`Lead "${lpLeadName}" routed to agent`);
+    setLpLeadName(''); setLpLeadEmail(''); setLpSocials(''); setLpAngle(''); setLpNotes(''); setLpLoom('');
+  };
 
   const selectedProfile = profiles.find(p => p.user_id === selectedUserId);
   const selectedRole = roles.find(r => r.user_id === selectedUserId)?.role || 'sales_rep';
