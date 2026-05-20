@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { formatDistanceToNow, differenceInHours } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { LeadScriptsDialog } from '@/components/leads/LeadScriptsDialog';
 
 interface PipelineLead {
   id: string;
@@ -28,6 +29,11 @@ interface PipelineLead {
   max_follow_ups: number;
   last_activity_at: string;
   created_at: string;
+  angle?: string | null;
+  notes?: string | null;
+  loom_link?: string | null;
+  lead_socials?: string | null;
+  lead_email?: string | null;
 }
 
 export default function DailyWorkPage() {
@@ -42,6 +48,8 @@ export default function DailyWorkPage() {
   const [coachThread, setCoachThread] = useState<any[]>([]);
   const [coachInput, setCoachInput] = useState('');
   const [coachSending, setCoachSending] = useState(false);
+  const [adminTodos, setAdminTodos] = useState<any[]>([]);
+  const [scriptsLead, setScriptsLead] = useState<PipelineLead | null>(null);
 
   const db: any = supabase;
 
@@ -62,7 +70,20 @@ export default function DailyWorkPage() {
     setCoachThread(data || []);
   }, [user]);
 
-  useEffect(() => { loadTodos(); loadCoach(); }, [loadTodos, loadCoach]);
+  const loadAdminTodos = useCallback(async () => {
+    if (!user) return;
+    const { data } = await db.from('admin_todos').select('*')
+      .eq('rep_id', user.id).order('created_at', { ascending: false }).limit(20);
+    setAdminTodos(data || []);
+  }, [user]);
+
+  useEffect(() => { loadTodos(); loadCoach(); loadAdminTodos(); }, [loadTodos, loadCoach, loadAdminTodos]);
+
+  const toggleAdminTodo = async (t: any) => {
+    const next = !t.is_done;
+    await db.from('admin_todos').update({ is_done: next, completed_at: next ? new Date().toISOString() : null }).eq('id', t.id);
+    loadAdminTodos();
+  };
 
   const toggleTodo = async (t: any) => {
     const next = !t.is_done;
@@ -177,6 +198,11 @@ export default function DailyWorkPage() {
             {formatDistanceToNow(new Date(lead.last_activity_at), { addSuffix: true })}
           </Badge>
         </div>
+        {lead.angle && (
+          <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+            <span className="font-medium text-foreground">Angle:</span> {lead.angle}
+          </p>
+        )}
         <div className="flex gap-2 mt-3">
           {actions.map(a => (
             <Button key={a.action} variant="outline" size="sm" className="flex-1 text-xs" onClick={() => handleQuickAction(lead.id, a.action)}>
@@ -184,7 +210,9 @@ export default function DailyWorkPage() {
               <span className="ml-1">{a.label}</span>
             </Button>
           ))}
-          <Button variant="ghost" size="sm" className="text-xs" onClick={() => navigate('/crm')}>View</Button>
+          <Button variant="default" size="sm" className="text-xs" onClick={() => setScriptsLead(lead)}>
+            <Sparkles className="h-3 w-3 mr-1" /> View Lead
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -201,6 +229,27 @@ export default function DailyWorkPage() {
           <h1 className="text-3xl font-bold">Daily Work</h1>
           <p className="text-muted-foreground">Your task engine — take action on your leads</p>
         </div>
+
+        {/* Admin custom objectives */}
+        {adminTodos.length > 0 && (
+          <Card className="border-primary/40 bg-primary/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-primary" /> Admin Objectives
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {adminTodos.map(t => (
+                  <li key={t.id} className="flex items-start gap-3 rounded-md border border-border p-2 bg-background/50">
+                    <Checkbox checked={t.is_done} onCheckedChange={() => toggleAdminTodo(t)} className="mt-0.5" />
+                    <p className={`text-sm flex-1 ${t.is_done ? 'line-through text-muted-foreground' : ''}`}>{t.task_text}</p>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        )}
 
         {/* This Week's AI Plan + Coach */}
         <Card>
