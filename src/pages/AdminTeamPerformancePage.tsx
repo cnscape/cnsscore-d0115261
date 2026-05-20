@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -12,8 +12,14 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, Responsive
 import { format, subDays, startOfWeek, endOfWeek, subWeeks, isWithinInterval } from 'date-fns';
 import {
   Loader2, Users, Target, TrendingUp, Phone, MessageSquare,
-  UserCheck, DollarSign, AlertTriangle, CheckCircle, XCircle, Calendar
+  UserCheck, DollarSign, AlertTriangle, CheckCircle, XCircle, Calendar, Plus, Trash2, UserPlus
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 
 interface MemberProfile {
   id: string;
@@ -97,6 +103,7 @@ function getProgressPercent(actual: number, target: number) {
 }
 
 export default function AdminTeamPerformancePage() {
+  const { user } = useAuth();
   const [profiles, setProfiles] = useState<MemberProfile[]>([]);
   const [roles, setRoles] = useState<MemberRole[]>([]);
   const [deals, setDeals] = useState<DealData[]>([]);
@@ -104,6 +111,22 @@ export default function AdminTeamPerformancePage() {
   const [leads, setLeads] = useState<PipelineData[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
+  const [adminTodos, setAdminTodos] = useState<any[]>([]);
+  const [newTodo, setNewTodo] = useState('');
+  const [savingTodo, setSavingTodo] = useState(false);
+
+  // Lead provisioning form
+  const [lpLeadName, setLpLeadName] = useState('');
+  const [lpLeadEmail, setLpLeadEmail] = useState('');
+  const [lpSocials, setLpSocials] = useState('');
+  const [lpPlatform, setLpPlatform] = useState('Instagram');
+  const [lpTier, setLpTier] = useState('B');
+  const [lpAngle, setLpAngle] = useState('');
+  const [lpNotes, setLpNotes] = useState('');
+  const [lpLoom, setLpLoom] = useState('');
+  const [savingLead, setSavingLead] = useState(false);
+
+  const db: any = supabase;
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -131,6 +154,60 @@ export default function AdminTeamPerformancePage() {
     };
     fetchAll();
   }, []);
+
+  const loadAdminTodos = useCallback(async () => {
+    if (!selectedUserId) return;
+    const { data } = await db.from('admin_todos').select('*')
+      .eq('rep_id', selectedUserId).order('created_at', { ascending: false }).limit(50);
+    setAdminTodos(data || []);
+  }, [selectedUserId]);
+
+  useEffect(() => { loadAdminTodos(); }, [loadAdminTodos]);
+
+  const handleAddTodo = async () => {
+    if (!newTodo.trim() || !selectedUserId) return;
+    setSavingTodo(true);
+    const { error } = await db.from('admin_todos').insert([{
+      rep_id: selectedUserId,
+      task_text: newTodo.trim(),
+      created_by: user?.id || null,
+    }]);
+    setSavingTodo(false);
+    if (error) { toast.error('Failed: ' + error.message); return; }
+    toast.success('Objective pushed to agent');
+    setNewTodo('');
+    loadAdminTodos();
+  };
+
+  const handleDeleteTodo = async (id: string) => {
+    await db.from('admin_todos').delete().eq('id', id);
+    loadAdminTodos();
+  };
+
+  const handleProvisionLead = async () => {
+    if (!selectedUserId || !lpLeadName.trim()) {
+      toast.error('Select an agent and enter a lead name');
+      return;
+    }
+    setSavingLead(true);
+    const { error } = await db.from('pipeline_leads').insert([{
+      owner_id: selectedUserId,
+      lead_name: lpLeadName.trim(),
+      lead_email: lpLeadEmail.trim() || null,
+      lead_contact: lpLeadEmail.trim() || null,
+      lead_socials: lpSocials.trim() || null,
+      platform: lpPlatform,
+      lead_score: lpTier,
+      angle: lpAngle.trim() || null,
+      notes: lpNotes.trim() || null,
+      loom_link: lpLoom.trim() || null,
+      stage: 'new_lead',
+    }]);
+    setSavingLead(false);
+    if (error) { toast.error('Failed: ' + error.message); return; }
+    toast.success(`Lead "${lpLeadName}" routed to agent`);
+    setLpLeadName(''); setLpLeadEmail(''); setLpSocials(''); setLpAngle(''); setLpNotes(''); setLpLoom('');
+  };
 
   const selectedProfile = profiles.find(p => p.user_id === selectedUserId);
   const selectedRole = roles.find(r => r.user_id === selectedUserId)?.role || 'sales_rep';
@@ -296,7 +373,7 @@ export default function AdminTeamPerformancePage() {
                 <TabsTrigger value="kpis">KPIs & Progress</TabsTrigger>
                 <TabsTrigger value="trends">Weekly Trends</TabsTrigger>
                 <TabsTrigger value="activity">Activity Log</TabsTrigger>
-                <TabsTrigger value="summary">AI Summary</TabsTrigger>
+                <TabsTrigger value="manage">Manage Agent</TabsTrigger>
               </TabsList>
 
               {/* KPIs TAB */}
@@ -500,20 +577,116 @@ export default function AdminTeamPerformancePage() {
                 </Card>
               </TabsContent>
 
-              {/* AI SUMMARY TAB */}
-              <TabsContent value="summary" className="space-y-6">
+              {/* MANAGE AGENT TAB — Custom To-Do Injector + Lead Provisioning */}
+              <TabsContent value="manage" className="space-y-6">
+                {/* Custom To-Do Injector */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <Target className="h-5 w-5 text-primary" />
-                      Performance Summary — {selectedProfile.full_name}
+                      <CheckCircle className="h-5 w-5 text-primary" />
+                      Daily Objective Injector
                     </CardTitle>
-                    <CardDescription>Week of {format(weekStart, 'dd MMM')} – {format(weekEnd, 'dd MMM yyyy')}</CardDescription>
+                    <CardDescription>Push a direct objective onto {selectedProfile.full_name}'s dashboard</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2 text-sm whitespace-pre-line leading-relaxed">
-                      {summary}
+                  <CardContent className="space-y-4">
+                    <div className="flex gap-2">
+                      <Input
+                        value={newTodo}
+                        onChange={(e) => setNewTodo(e.target.value)}
+                        placeholder="Enter custom daily objective for this agent..."
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleAddTodo(); }}
+                      />
+                      <Button onClick={handleAddTodo} disabled={!newTodo.trim() || savingTodo}>
+                        {savingTodo ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Plus className="h-4 w-4 mr-1" /> Add To-Do</>}
+                      </Button>
                     </div>
+                    {adminTodos.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No active objectives. Pushed objectives appear on the agent's Daily Work page.</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {adminTodos.map(t => (
+                          <li key={t.id} className="flex items-center gap-3 rounded-md border border-border p-2">
+                            <Badge variant={t.is_done ? 'outline' : 'secondary'} className="text-[10px]">
+                              {t.is_done ? 'Done' : 'Active'}
+                            </Badge>
+                            <p className={`flex-1 text-sm ${t.is_done ? 'line-through text-muted-foreground' : ''}`}>{t.task_text}</p>
+                            <Button size="icon" variant="ghost" onClick={() => handleDeleteTodo(t.id)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Advanced Lead Provisioning Form */}
+                <Card className="border-primary/30">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <UserPlus className="h-5 w-5 text-primary" />
+                      Advanced Lead Provisioning
+                    </CardTitle>
+                    <CardDescription>Route a high-value lead directly into {selectedProfile.full_name}'s pipeline</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Lead Name *</Label>
+                        <Input value={lpLeadName} onChange={(e) => setLpLeadName(e.target.value)} placeholder="Full name or creator brand" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Lead Email</Label>
+                        <Input type="email" value={lpLeadEmail} onChange={(e) => setLpLeadEmail(e.target.value)} placeholder="lead@example.com" />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label>Lead Socials (URL)</Label>
+                        <Input value={lpSocials} onChange={(e) => setLpSocials(e.target.value)} placeholder="https://instagram.com/handle" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Platform</Label>
+                        <Select value={lpPlatform} onValueChange={setLpPlatform}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Instagram">Instagram</SelectItem>
+                            <SelectItem value="LinkedIn">LinkedIn</SelectItem>
+                            <SelectItem value="YouTube">YouTube</SelectItem>
+                            <SelectItem value="Twitter">Twitter</SelectItem>
+                            <SelectItem value="Email">Email</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Lead Status</Label>
+                        <Select value={lpTier} onValueChange={setLpTier}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="A">🟢 A-Tier (Confirmed Income)</SelectItem>
+                            <SelectItem value="B">🟡 B-Tier (Nurture &lt; 10k/mo)</SelectItem>
+                            <SelectItem value="C">🔴 C-Tier (Parked / Unqualified)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label>Angle / Botched System Spotted</Label>
+                        <Input value={lpAngle} onChange={(e) => setLpAngle(e.target.value)} placeholder='e.g. "WhatsApp group chaos with no upsell"' />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label>Strategic Notes / Pain Point</Label>
+                        <Textarea value={lpNotes} onChange={(e) => setLpNotes(e.target.value)} placeholder="Specific bottleneck, business context, etc." className="min-h-[80px]" />
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label>CEO's Custom Loom Link</Label>
+                        <Input value={lpLoom} onChange={(e) => setLpLoom(e.target.value)} placeholder="https://loom.com/share/..." />
+                      </div>
+                    </div>
+                    <Button onClick={handleProvisionLead} disabled={savingLead || !lpLeadName.trim()} className="w-full">
+                      {savingLead ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <UserPlus className="h-4 w-4 mr-2" />}
+                      Route Lead to {selectedProfile.full_name}
+                    </Button>
                   </CardContent>
                 </Card>
 
