@@ -841,6 +841,7 @@ export type Database = {
       }
       pipeline_leads: {
         Row: {
+          angle: string | null
           call_outcome: string | null
           created_at: string | null
           deal_id: string | null
@@ -848,8 +849,11 @@ export type Database = {
           id: string
           last_activity_at: string | null
           lead_contact: string | null
+          lead_email: string | null
           lead_name: string
           lead_score: string | null
+          lead_socials: string | null
+          loom_link: string | null
           max_follow_ups: number | null
           notes: string | null
           owner_id: string
@@ -858,6 +862,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          angle?: string | null
           call_outcome?: string | null
           created_at?: string | null
           deal_id?: string | null
@@ -865,8 +870,11 @@ export type Database = {
           id?: string
           last_activity_at?: string | null
           lead_contact?: string | null
+          lead_email?: string | null
           lead_name: string
           lead_score?: string | null
+          lead_socials?: string | null
+          loom_link?: string | null
           max_follow_ups?: number | null
           notes?: string | null
           owner_id: string
@@ -875,6 +883,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          angle?: string | null
           call_outcome?: string | null
           created_at?: string | null
           deal_id?: string | null
@@ -882,8 +891,11 @@ export type Database = {
           id?: string
           last_activity_at?: string | null
           lead_contact?: string | null
+          lead_email?: string | null
           lead_name?: string
           lead_score?: string | null
+          lead_socials?: string | null
+          loom_link?: string | null
           max_follow_ups?: number | null
           notes?: string | null
           owner_id?: string
