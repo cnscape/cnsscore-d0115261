@@ -13,6 +13,7 @@ import { Plus, Eye, EyeOff, Copy, Trash2, ExternalLink, Sparkles, Loader2, Arrow
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import ReactMarkdown from 'react-markdown';
+import { SalesLeadLogger } from '@/components/clients/SalesLeadLogger';
 
 interface Credential { id: string; label: string; url: string | null; username: string | null; password: string | null; notes: string | null; }
 interface DriveDoc { id: string; title: string; url: string; description: string | null; doc_type: string | null; }
@@ -35,12 +36,13 @@ export default function ClientDashboardPage() {
 
   const fetchAll = async () => {
     if (!clientId) return;
-    const [c, cr, dd, deals, leads] = await Promise.all([
+    const [c, cr, dd, deals, leads, contacted] = await Promise.all([
       supabase.from('clients').select('*').eq('id', clientId).maybeSingle(),
       supabase.from('client_credentials' as any).select('*').eq('client_id', clientId).order('created_at', { ascending: false }),
       supabase.from('client_drive_docs' as any).select('*').eq('client_id', clientId).order('created_at', { ascending: false }),
       supabase.from('deals').select('status,revenue').eq('client_id', clientId),
       supabase.from('pipeline_leads').select('id').limit(1000),
+      supabase.from('client_contacted_leads' as any).select('id').eq('client_id', clientId),
     ]);
     setClient(c.data);
     setCreds((cr.data as unknown as Credential[]) ?? []);
@@ -52,7 +54,7 @@ export default function ClientDashboardPage() {
       deals: dlist.length,
       won: won.length,
       openDeals: dlist.filter(d => d.status === 'open').length,
-      leads: leads.data?.length ?? 0,
+      leads: (contacted.data?.length ?? 0) + (leads.data?.length ?? 0),
     });
   };
 
@@ -115,6 +117,9 @@ export default function ClientDashboardPage() {
           <Card><CardContent className="p-4"><div className="flex items-center justify-between"><div><p className="text-xs text-muted-foreground">Open Deals</p><p className="text-2xl font-bold">{metrics.openDeals}</p></div><TrendingUp className="h-8 w-8 text-primary/40" /></div></CardContent></Card>
           <Card><CardContent className="p-4"><div className="flex items-center justify-between"><div><p className="text-xs text-muted-foreground">Total Leads</p><p className="text-2xl font-bold">{metrics.leads}</p></div><Users className="h-8 w-8 text-primary/40" /></div></CardContent></Card>
         </div>
+
+        {/* Sales Team · Contacted Leads */}
+        <SalesLeadLogger clientId={clientId!} onChanged={fetchAll} />
 
         {/* AI Coach */}
         <Card className="border-primary/40">
