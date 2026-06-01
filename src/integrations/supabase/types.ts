@@ -95,6 +95,48 @@ export type Database = {
           },
         ]
       }
+      admin_todos: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: number
+          is_completed: boolean | null
+          priority: string | null
+          rep_id: string | null
+          status: string | null
+          task_text: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: number
+          is_completed?: boolean | null
+          priority?: string | null
+          rep_id?: string | null
+          status?: string | null
+          task_text: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: number
+          is_completed?: boolean | null
+          priority?: string | null
+          rep_id?: string | null
+          status?: string | null
+          task_text?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           id: string
