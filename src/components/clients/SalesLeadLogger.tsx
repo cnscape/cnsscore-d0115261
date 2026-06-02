@@ -191,7 +191,7 @@ export function SalesLeadLogger({ clientId, onChanged }: { clientId: string; onC
                     </div>
                     <div className="space-y-1"><Label>Lead Name *</Label><Input value={form.lead_name} onChange={e => setForm({ ...form, lead_name: e.target.value })} /></div>
                     <div className="space-y-1"><Label>Company</Label><Input value={form.company_name} onChange={e => setForm({ ...form, company_name: e.target.value })} /></div>
-                    <div className="space-y-1 col-span-2"><Label>LinkedIn URL</Label><Input value={form.linkedin_url} onChange={e => setForm({ ...form, linkedin_url: e.target.value })} placeholder="https://linkedin.com/in/..." /></div>
+                    <div className="space-y-1 col-span-2"><Label>Profile / Website URL <span className="text-muted-foreground text-xs">(optional)</span></Label><Input value={form.linkedin_url} onChange={e => setForm({ ...form, linkedin_url: e.target.value })} placeholder="https:// — LinkedIn, website, IG, anywhere" /></div>
                     <div className="space-y-1">
                       <Label>Outreach Channel</Label>
                       <Select value={form.outreach_channel} onValueChange={v => setForm({ ...form, outreach_channel: v })}>
