@@ -30,6 +30,7 @@ import AdminTeamPerformancePage from "./pages/AdminTeamPerformancePage";
 import CollectionsCRMPage from "./pages/CollectionsCRMPage";
 import AdminKpiTargetsPage from "./pages/AdminKpiTargetsPage";
 import ClientDashboardPage from "./pages/ClientDashboardPage";
+import MyClientsPage from "./pages/MyClientsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +59,7 @@ function AppRoutes() {
       <Route path="/book-call" element={<ProtectedRoute><ScoutBookingPage /></ProtectedRoute>} />
       <Route path="/scorecard" element={<ProtectedRoute><ScorecardPage /></ProtectedRoute>} />
       <Route path="/deals" element={<ProtectedRoute><DealsPage /></ProtectedRoute>} />
+      <Route path="/my-clients" element={<ProtectedRoute><MyClientsPage /></ProtectedRoute>} />
       <Route path="/my-commission" element={<ProtectedRoute><MyCommissionPage /></ProtectedRoute>} />
       <Route path="/training" element={<ProtectedRoute><TrainingPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
