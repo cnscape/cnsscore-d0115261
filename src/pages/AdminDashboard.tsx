@@ -14,6 +14,7 @@ import {
   TrendingUp, AlertTriangle, CheckCircle, XCircle, Briefcase, FileText, Phone
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { PipelineVelocityChart } from '@/components/analytics/PipelineVelocityChart';
 
 interface DealRow {
   id: string;
@@ -159,6 +160,8 @@ export default function AdminDashboard() {
               <StatCard title="Total Revenue" value={`R${allRevenue.toLocaleString()}`} subtitle="Won deals" icon={<DollarSign className="h-5 w-5" />} variant="glow" />
               <StatCard title="Total Commission" value={`R${allCommission.toLocaleString()}`} subtitle="10% of revenue" icon={<TrendingUp className="h-5 w-5" />} />
             </div>
+
+            <PipelineVelocityChart />
 
             {/* Recent deals */}
             <Card>

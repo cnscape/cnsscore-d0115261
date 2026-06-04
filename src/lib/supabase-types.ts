@@ -135,3 +135,17 @@ export interface StaleLead {
   last_activity_at: string | null;
   days_inactive: number | null;
 }
+
+export interface StageVelocityRow {
+  deal_id: string;
+  stage_name: string;
+  entered_at: string | null;
+  exited_at: string | null;
+  days_spent: number | null;
+}
+
+export interface StageVelocityAverage {
+  stage_name: string;
+  avg_days: number;
+  sample_size: number;
+}
