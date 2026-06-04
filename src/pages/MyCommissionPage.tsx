@@ -21,6 +21,9 @@ interface DealRow {
   created_at: string;
   closed_at: string | null;
   client_id: string;
+  expected_close_date: string | null;
+  close_date_pushed_count: number | null;
+  discount_percent: number | null;
   clients?: { name: string };
 }
 
@@ -36,7 +39,7 @@ export default function MyCommissionPage() {
     const fetchData = async () => {
       setIsLoading(true);
       const [dealsRes, achievementsRes, uaRes] = await Promise.all([
-        supabase.from('deals').select('id, status, revenue, rep_commission, commission_percent, lead_name, created_at, closed_at, client_id, clients(name)').eq('rep_id', user.id).order('created_at', { ascending: false }),
+        supabase.from('deals').select('id, status, revenue, rep_commission, commission_percent, lead_name, created_at, closed_at, client_id, expected_close_date, close_date_pushed_count, discount_percent, clients(name)').eq('rep_id', user.id).order('created_at', { ascending: false }),
         supabase.from('achievements').select('*').order('xp_reward', { ascending: true }),
         supabase.from('user_achievements').select('*').eq('user_id', user.id),
       ]);
