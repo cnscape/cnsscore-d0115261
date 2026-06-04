@@ -595,7 +595,9 @@ export type Database = {
           lead_contact: string | null
           lead_link: string | null
           lead_name: string | null
-          lost_reason_id: string | null
+          lost_reason:
+            | Database["public"]["Enums"]["deal_lost_reason_enum"]
+            | null
           notes: string | null
           offer_id: string
           rep_commission: number | null
@@ -623,7 +625,9 @@ export type Database = {
           lead_contact?: string | null
           lead_link?: string | null
           lead_name?: string | null
-          lost_reason_id?: string | null
+          lost_reason?:
+            | Database["public"]["Enums"]["deal_lost_reason_enum"]
+            | null
           notes?: string | null
           offer_id: string
           rep_commission?: number | null
@@ -651,7 +655,9 @@ export type Database = {
           lead_contact?: string | null
           lead_link?: string | null
           lead_name?: string | null
-          lost_reason_id?: string | null
+          lost_reason?:
+            | Database["public"]["Enums"]["deal_lost_reason_enum"]
+            | null
           notes?: string | null
           offer_id?: string
           rep_commission?: number | null
@@ -668,13 +674,6 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "deals_lost_reason_id_fkey"
-            columns: ["lost_reason_id"]
-            isOneToOne: false
-            referencedRelation: "lost_reasons"
             referencedColumns: ["id"]
           },
           {
@@ -1749,6 +1748,14 @@ export type Database = {
         | "affiliate"
         | "referral"
         | "other"
+      deal_lost_reason_enum:
+        | "Pricing"
+        | "Competitor"
+        | "Feature Gap"
+        | "No Budget"
+        | "Timing/Postponed"
+        | "Poor Qualification"
+        | "Lost Contact"
       deal_status: "open" | "won" | "lost" | "stalled"
       revenue_model_type:
         | "revenue_share"
@@ -1891,6 +1898,15 @@ export const Constants = {
         "affiliate",
         "referral",
         "other",
+      ],
+      deal_lost_reason_enum: [
+        "Pricing",
+        "Competitor",
+        "Feature Gap",
+        "No Budget",
+        "Timing/Postponed",
+        "Poor Qualification",
+        "Lost Contact",
       ],
       deal_status: ["open", "won", "lost", "stalled"],
       revenue_model_type: [
