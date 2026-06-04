@@ -1668,6 +1668,38 @@ export type Database = {
       }
     }
     Views: {
+      stage_velocity_analytics: {
+        Row: {
+          days_spent: number | null
+          deal_id: string | null
+          entered_at: string | null
+          exited_at: string | null
+          stage_name: string | null
+        }
+        Insert: {
+          days_spent?: never
+          deal_id?: string | null
+          entered_at?: string | null
+          exited_at?: string | null
+          stage_name?: string | null
+        }
+        Update: {
+          days_spent?: never
+          deal_id?: string | null
+          entered_at?: string | null
+          exited_at?: string | null
+          stage_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_deal"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stale_leads_view: {
         Row: {
           days_inactive: number | null
