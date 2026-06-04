@@ -61,6 +61,7 @@ function AppRoutes() {
       <Route path="/deals" element={<ProtectedRoute><DealsPage /></ProtectedRoute>} />
       <Route path="/my-clients" element={<ProtectedRoute><MyClientsPage /></ProtectedRoute>} />
       <Route path="/my-commission" element={<ProtectedRoute><MyCommissionPage /></ProtectedRoute>} />
+      <Route path="/my-collections" element={<ProtectedRoute><CollectionsCRMPage /></ProtectedRoute>} />
       <Route path="/training" element={<ProtectedRoute><TrainingPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/history" element={<ProtectedRoute><Navigate to="/achievements" replace /></ProtectedRoute>} />
