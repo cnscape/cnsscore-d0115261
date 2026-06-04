@@ -86,3 +86,52 @@ export interface UserWithProfile {
   profile: Profile;
   roles: AppRole[];
 }
+
+export type DealStatus = 'open' | 'won' | 'lost' | 'stalled';
+export type DealChannel = 'organic' | 'paid' | 'referral' | 'call' | 'phone' | 'email' | string;
+
+export interface Deal {
+  id: string;
+  client_id: string;
+  offer_id: string;
+  rep_id: string;
+  stage_id: string | null;
+  status: DealStatus;
+  channel: DealChannel | null;
+  campaign: string | null;
+  revenue: number | null;
+  gross_revenue: number | null;
+  client_share: number | null;
+  cape_neto_share: number | null;
+  rep_commission: number | null;
+  commission_percent: number | null;
+  lead_name: string | null;
+  lead_contact: string | null;
+  lead_link: string | null;
+  notes: string | null;
+  lost_reason_id: string | null;
+  stage_entered_at: string | null;
+  closed_at: string | null;
+  // New schema additions
+  expected_close_date: string | null;
+  close_date_pushed_count: number | null;
+  discount_percent: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DealStageHistory {
+  id: number;
+  deal_id: string;
+  stage_name: string;
+  entered_at: string | null;
+  exited_at: string | null;
+}
+
+export interface StaleLead {
+  id: string;
+  lead_name: string | null;
+  lead_contact: string | null;
+  last_activity_at: string | null;
+  days_inactive: number | null;
+}

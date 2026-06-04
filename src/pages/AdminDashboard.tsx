@@ -25,6 +25,9 @@ interface DealRow {
   rep_id: string;
   lead_name: string | null;
   campaign: string | null;
+  expected_close_date: string | null;
+  close_date_pushed_count: number | null;
+  discount_percent: number | null;
 }
 
 interface ProfileRow {
@@ -49,7 +52,7 @@ export default function AdminDashboard() {
     const fetchAll = async () => {
       setIsLoading(true);
       const [dealsRes, profilesRes] = await Promise.all([
-        supabase.from('deals').select('id, status, channel, revenue, rep_commission, created_at, rep_id, lead_name, campaign'),
+        supabase.from('deals').select('id, status, channel, revenue, rep_commission, created_at, rep_id, lead_name, campaign, expected_close_date, close_date_pushed_count, discount_percent'),
         supabase.from('profiles').select('id, user_id, full_name, is_active, level, current_streak').eq('is_active', true),
       ]);
       if (dealsRes.data) setDeals(dealsRes.data as DealRow[]);

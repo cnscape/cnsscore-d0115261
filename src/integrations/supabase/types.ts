@@ -240,6 +240,54 @@ export type Database = {
           },
         ]
       }
+      client_contacted_leads: {
+        Row: {
+          assigned_closer_id: string | null
+          client_id: string
+          company_name: string | null
+          contacted_at: string
+          created_at: string
+          deal_status: string
+          deal_value: number | null
+          id: string
+          lead_name: string
+          linkedin_url: string | null
+          outreach_channel: string | null
+          rep_id: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_closer_id?: string | null
+          client_id: string
+          company_name?: string | null
+          contacted_at?: string
+          created_at?: string
+          deal_status?: string
+          deal_value?: number | null
+          id?: string
+          lead_name: string
+          linkedin_url?: string | null
+          outreach_channel?: string | null
+          rep_id: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_closer_id?: string | null
+          client_id?: string
+          company_name?: string | null
+          contacted_at?: string
+          created_at?: string
+          deal_status?: string
+          deal_value?: number | null
+          id?: string
+          lead_name?: string
+          linkedin_url?: string | null
+          outreach_channel?: string | null
+          rep_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       client_credentials: {
         Row: {
           client_id: string
@@ -324,6 +372,41 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_lead_notes: {
+        Row: {
+          created_at: string
+          id: string
+          lead_id: string
+          note: string
+          rep_id: string
+          rep_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lead_id: string
+          note: string
+          rep_id: string
+          rep_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lead_id?: string
+          note?: string
+          rep_id?: string
+          rep_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_lead_notes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "client_contacted_leads"
             referencedColumns: ["id"]
           },
         ]
@@ -427,6 +510,38 @@ export type Database = {
           },
         ]
       }
+      deal_stage_history: {
+        Row: {
+          deal_id: string
+          entered_at: string | null
+          exited_at: string | null
+          id: number
+          stage_name: string
+        }
+        Insert: {
+          deal_id: string
+          entered_at?: string | null
+          exited_at?: string | null
+          id?: number
+          stage_name: string
+        }
+        Update: {
+          deal_id?: string
+          entered_at?: string | null
+          exited_at?: string | null
+          id?: number
+          stage_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_deal"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deal_stages: {
         Row: {
           client_id: string
@@ -469,15 +584,18 @@ export type Database = {
           channel: Database["public"]["Enums"]["deal_channel"] | null
           client_id: string
           client_share: number | null
+          close_date_pushed_count: number | null
           closed_at: string | null
           commission_percent: number | null
           created_at: string | null
+          discount_percent: number | null
+          expected_close_date: string | null
           gross_revenue: number | null
           id: string
           lead_contact: string | null
           lead_link: string | null
           lead_name: string | null
-          lost_reason: string | null
+          lost_reason_id: string | null
           notes: string | null
           offer_id: string
           rep_commission: number | null
@@ -494,15 +612,18 @@ export type Database = {
           channel?: Database["public"]["Enums"]["deal_channel"] | null
           client_id: string
           client_share?: number | null
+          close_date_pushed_count?: number | null
           closed_at?: string | null
           commission_percent?: number | null
           created_at?: string | null
+          discount_percent?: number | null
+          expected_close_date?: string | null
           gross_revenue?: number | null
           id?: string
           lead_contact?: string | null
           lead_link?: string | null
           lead_name?: string | null
-          lost_reason?: string | null
+          lost_reason_id?: string | null
           notes?: string | null
           offer_id: string
           rep_commission?: number | null
@@ -519,15 +640,18 @@ export type Database = {
           channel?: Database["public"]["Enums"]["deal_channel"] | null
           client_id?: string
           client_share?: number | null
+          close_date_pushed_count?: number | null
           closed_at?: string | null
           commission_percent?: number | null
           created_at?: string | null
+          discount_percent?: number | null
+          expected_close_date?: string | null
           gross_revenue?: number | null
           id?: string
           lead_contact?: string | null
           lead_link?: string | null
           lead_name?: string | null
-          lost_reason?: string | null
+          lost_reason_id?: string | null
           notes?: string | null
           offer_id?: string
           rep_commission?: number | null
@@ -544,6 +668,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_lost_reason_id_fkey"
+            columns: ["lost_reason_id"]
+            isOneToOne: false
+            referencedRelation: "lost_reasons"
             referencedColumns: ["id"]
           },
           {
@@ -780,6 +911,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "pipeline_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_activities_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "stale_leads_view"
             referencedColumns: ["id"]
           },
         ]
@@ -1530,7 +1668,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      stale_leads_view: {
+        Row: {
+          days_inactive: number | null
+          id: string | null
+          last_activity_at: string | null
+          lead_contact: string | null
+          lead_name: string | null
+        }
+        Insert: {
+          days_inactive?: never
+          id?: string | null
+          last_activity_at?: string | null
+          lead_contact?: string | null
+          lead_name?: string | null
+        }
+        Update: {
+          days_inactive?: never
+          id?: string | null
+          last_activity_at?: string | null
+          lead_contact?: string | null
+          lead_name?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       award_xp: { Args: { _user_id: string; _xp: number }; Returns: undefined }
