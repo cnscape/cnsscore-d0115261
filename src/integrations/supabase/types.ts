@@ -510,6 +510,35 @@ export type Database = {
           },
         ]
       }
+      deal_payments: {
+        Row: {
+          amount_paid: number
+          deal_id: string | null
+          id: string
+          paid_at: string | null
+        }
+        Insert: {
+          amount_paid: number
+          deal_id?: string | null
+          id?: string
+          paid_at?: string | null
+        }
+        Update: {
+          amount_paid?: number
+          deal_id?: string | null
+          id?: string
+          paid_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_payments_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deal_stage_history: {
         Row: {
           deal_id: string
@@ -1674,20 +1703,6 @@ export type Database = {
           entered_at: string | null
           exited_at: string | null
           stage_name: string | null
-        }
-        Insert: {
-          days_spent?: never
-          deal_id?: string | null
-          entered_at?: string | null
-          exited_at?: string | null
-          stage_name?: string | null
-        }
-        Update: {
-          days_spent?: never
-          deal_id?: string | null
-          entered_at?: string | null
-          exited_at?: string | null
-          stage_name?: string | null
         }
         Relationships: [
           {
