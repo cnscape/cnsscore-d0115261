@@ -24,6 +24,7 @@ interface Deal {
   client_id: string;
   offer_id: string;
   rep_id: string;
+  stage_id: string | null;
   status: string;
   channel: string;
   campaign: string | null;
@@ -42,6 +43,7 @@ interface Deal {
   closed_at: string | null;
   clients?: { name: string; requires_link?: boolean };
   offers?: { name: string; ticket_size: number };
+  deal_stages?: { name: string } | null;
 }
 
 interface Client {
@@ -71,6 +73,14 @@ interface ClientChannel {
   color: string | null;
 }
 
+interface DealStage {
+  id: string;
+  client_id: string;
+  name: string;
+  sort_order: number;
+  is_terminal: boolean | null;
+}
+
 export default function DealsPage({ adminView = false }: { adminView?: boolean }) {
   const { user, isAdmin } = useAuth();
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -78,6 +88,8 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
   const [offers, setOffers] = useState<Offer[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [channels, setChannels] = useState<ClientChannel[]>([]);
+  const [dealStages, setDealStages] = useState<DealStage[]>([]);
+  const [editDealStages, setEditDealStages] = useState<DealStage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showAddDeal, setShowAddDeal] = useState(false);
   const [filterClient, setFilterClient] = useState('all');
@@ -87,11 +99,13 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [editCommissionPercent, setEditCommissionPercent] = useState(10);
   const [editRevenue, setEditRevenue] = useState(0);
+  const [editStageId, setEditStageId] = useState<string | null>(null);
 
   // Form
   const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedOfferId, setSelectedOfferId] = useState('');
   const [selectedCampaignId, setSelectedCampaignId] = useState('');
+  const [selectedStageId, setSelectedStageId] = useState('');
   const [channel, setChannel] = useState('organic');
   const [leadName, setLeadName] = useState('');
   const [leadContact, setLeadContact] = useState('');
@@ -116,7 +130,7 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
 
     let dealsQuery = supabase
       .from('deals')
-      .select('*, clients(name, requires_link), offers(name, ticket_size)')
+      .select('*, clients(name, requires_link), offers(name, ticket_size), deal_stages(name)')
       .order('created_at', { ascending: false });
     if (!adminView && user) dealsQuery = dealsQuery.eq('rep_id', user.id);
     const { data: dealsData } = await dealsQuery;
@@ -125,6 +139,41 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
   };
 
   useEffect(() => { fetchData(); }, [user, adminView]);
+
+  // Fetch deal stages when client is selected in creation form
+  useEffect(() => {
+    if (!selectedClientId) {
+      setDealStages([]);
+      setSelectedStageId('');
+      return;
+    }
+    supabase
+      .from('deal_stages')
+      .select('id, client_id, name, sort_order, is_terminal')
+      .eq('client_id', selectedClientId)
+      .order('sort_order', { ascending: true })
+      .then(({ data }) => {
+        if (data) setDealStages(data as unknown as DealStage[]);
+      });
+  }, [selectedClientId]);
+
+  // Fetch deal stages when editing a deal
+  useEffect(() => {
+    if (!editingDeal) {
+      setEditDealStages([]);
+      setEditStageId(null);
+      return;
+    }
+    setEditStageId(editingDeal.stage_id);
+    supabase
+      .from('deal_stages')
+      .select('id, client_id, name, sort_order, is_terminal')
+      .eq('client_id', editingDeal.client_id)
+      .order('sort_order', { ascending: true })
+      .then(({ data }) => {
+        if (data) setEditDealStages(data as unknown as DealStage[]);
+      });
+  }, [editingDeal]);
 
   const filteredDeals = deals.filter(d => {
     if (filterClient !== 'all' && d.client_id !== filterClient) return false;
@@ -158,11 +207,11 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
     const capeNetoShare = grossRevenue * (client.revenue_share_percent / 100);
     const clientShare = grossRevenue - capeNetoShare;
 
-    const { data: insertedDeal, error } = await supabase.from('deals').insert([{
+    const payload: any = {
       client_id: selectedClientId,
       offer_id: selectedOfferId,
       rep_id: user.id,
-      channel: channel as any,
+      channel: channel,
       campaign: selectedCampaignId && selectedCampaignId !== 'none' ? selectedCampaignId : null,
       lead_name: leadName.trim(),
       lead_contact: leadContact.trim(),
@@ -174,7 +223,12 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
       cape_neto_share: capeNetoShare,
       commission_percent: 10,
       rep_commission: 0,
-    } as any]).select('id').single();
+    };
+    if (selectedStageId) {
+      payload.stage_id = selectedStageId;
+    }
+
+    const { data: insertedDeal, error } = await supabase.from('deals').insert([payload]).select('id').single();
 
     setIsSubmitting(false);
     if (error) {
@@ -213,11 +267,15 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
 
   const handleUpdateDeal = async () => {
     if (!editingDeal) return;
-    const { error } = await supabase.from('deals').update({
+    const updates: any = {
       commission_percent: editCommissionPercent,
       revenue: editRevenue,
       rep_commission: 0, // trigger will recalculate
-    } as any).eq('id', editingDeal.id);
+    };
+    if (editStageId !== null) {
+      updates.stage_id = editStageId;
+    }
+    const { error } = await supabase.from('deals').update(updates).eq('id', editingDeal.id);
     if (error) { toast.error('Failed to update deal'); return; }
     toast.success('Deal updated — commission recalculated');
     setEditingDeal(null); fetchData();
@@ -238,6 +296,7 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
 
   const resetForm = () => {
     setSelectedClientId(''); setSelectedOfferId(''); setSelectedCampaignId('');
+    setSelectedStageId('');
     setChannel('organic'); setLeadName(''); setLeadContact(''); setLeadLink('');
     setDealRevenue(''); setDealNotes(''); setFormErrors({});
   };
@@ -293,7 +352,7 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
                     <SearchableClientSelect
                       clients={clients}
                       value={selectedClientId}
-                      onValueChange={(v) => { setSelectedClientId(v); setSelectedOfferId(''); setFormErrors(prev => ({ ...prev, client: '' })); }}
+                      onValueChange={(v) => { setSelectedClientId(v); setSelectedOfferId(''); setSelectedStageId(''); setFormErrors(prev => ({ ...prev, client: '' })); }}
                       onCreateClient={isAdmin ? handleQuickCreateClient : undefined}
                       allowCreate={isAdmin}
                       placeholder="Search clients..."
@@ -301,17 +360,31 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
                     {formErrors.client && <p className="text-xs text-destructive">{formErrors.client}</p>}
                   </div>
                   {selectedClientId && (
-                    <div className="space-y-2">
-                      <Label>Offer <span className="text-destructive">*</span></Label>
-                      <Select value={selectedOfferId} onValueChange={(v) => { setSelectedOfferId(v); setFormErrors(prev => ({ ...prev, offer: '' })); }}>
-                        <SelectTrigger><SelectValue placeholder="Select offer" /></SelectTrigger>
-                        <SelectContent>
-                          {clientOffers.map(o => <SelectItem key={o.id} value={o.id}>{o.name} — R{o.ticket_size.toLocaleString()}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                      {clientOffers.length === 0 && <p className="text-xs text-muted-foreground">No offers for this client.</p>}
-                      {formErrors.offer && <p className="text-xs text-destructive">{formErrors.offer}</p>}
-                    </div>
+                    <>
+                      <div className="space-y-2">
+                        <Label>Offer <span className="text-destructive">*</span></Label>
+                        <Select value={selectedOfferId} onValueChange={(v) => { setSelectedOfferId(v); setFormErrors(prev => ({ ...prev, offer: '' })); }}>
+                          <SelectTrigger><SelectValue placeholder="Select offer" /></SelectTrigger>
+                          <SelectContent>
+                            {clientOffers.map(o => <SelectItem key={o.id} value={o.id}>{o.name} — R{o.ticket_size.toLocaleString()}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        {clientOffers.length === 0 && <p className="text-xs text-muted-foreground">No offers for this client.</p>}
+                        {formErrors.offer && <p className="text-xs text-destructive">{formErrors.offer}</p>}
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Pipeline Stage</Label>
+                        <Select value={selectedStageId} onValueChange={setSelectedStageId}>
+                          <SelectTrigger><SelectValue placeholder="Auto-assign first stage" /></SelectTrigger>
+                          <SelectContent>
+                            {dealStages.map(s => (
+                              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">Leave blank to auto-assign the first stage.</p>
+                      </div>
+                    </>
                   )}
                   <div className="space-y-2">
                     <Label>Campaign</Label>
@@ -407,11 +480,23 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
           <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">{adminView ? 'Total Commission' : 'My Commission'}</p><p className="text-2xl font-bold text-primary">R{filteredDeals.filter(d => d.status === 'won').reduce((s, d) => s + (d.rep_commission || 0), 0).toLocaleString()}</p></CardContent></Card>
         </div>
 
-        {/* Edit Deal Dialog (admin commission % + revenue) */}
+        {/* Edit Deal Dialog */}
         <Dialog open={!!editingDeal} onOpenChange={(o) => { if (!o) setEditingDeal(null); }}>
           <DialogContent>
             <DialogHeader><DialogTitle>Edit Deal — {editingDeal?.lead_name}</DialogTitle></DialogHeader>
             <div className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>Pipeline Stage</Label>
+                <Select value={editStageId ?? 'null'} onValueChange={(v) => setEditStageId(v === 'null' ? null : v)}>
+                  <SelectTrigger><SelectValue placeholder="Select stage" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="null">Not set</SelectItem>
+                    {editDealStages.map(s => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-2">
                 <Label>Revenue (ZAR)</Label>
                 <Input type="number" value={editRevenue} onChange={e => setEditRevenue(Number(e.target.value))} />
@@ -436,6 +521,7 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
                 <TableHead>Lead</TableHead>
                 <TableHead>Client</TableHead>
                 <TableHead>Offer</TableHead>
+                <TableHead>Stage</TableHead>
                 <TableHead>Channel</TableHead>
                 <TableHead className="text-center">Status</TableHead>
                 <TableHead className="text-right">Revenue</TableHead>
@@ -460,6 +546,11 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
                   </TableCell>
                   <TableCell>{deal.clients?.name || '—'}</TableCell>
                   <TableCell>{deal.offers?.name || '—'}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-xs">
+                      {deal.deal_stages?.name || '—'}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="capitalize">{deal.channel?.replace('_', ' ')}</TableCell>
                   <TableCell className="text-center">
                     {canEditDeal(deal) ? (
@@ -496,7 +587,7 @@ export default function DealsPage({ adminView = false }: { adminView?: boolean }
                 </TableRow>
               ))}
               {filteredDeals.length === 0 && (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No deals found. Create your first deal to get started!</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">No deals found. Create your first deal to get started!</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
