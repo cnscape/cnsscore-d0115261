@@ -43,6 +43,22 @@ interface LeadActivity {
   created_at: string;
 }
 
+interface RepProfile {
+  user_id: string;
+  full_name: string;
+}
+
+// Deterministic avatar color from a string
+const avatarColor = (seed: string) => {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  const hue = h % 360;
+  return `hsl(${hue} 70% 45%)`;
+};
+
+const initialsOf = (name: string) =>
+  name.split(/\s+/).filter(Boolean).slice(0, 2).map(s => s[0]?.toUpperCase() ?? '').join('') || '?';
+
 const STAGES = [
   { key: 'new_lead', label: 'New Lead', color: 'bg-muted' },
   { key: 'dm_sent', label: 'DM Sent', color: 'bg-accent/20' },
@@ -62,6 +78,8 @@ export default function CRMPipelinePage({ embedded = false }: { embedded?: boole
   const [showAddLead, setShowAddLead] = useState(false);
   const [selectedLead, setSelectedLead] = useState<PipelineLead | null>(null);
   const [draggedLead, setDraggedLead] = useState<string | null>(null);
+  const [reps, setReps] = useState<RepProfile[]>([]);
+  const [filterRepId, setFilterRepId] = useState<string>('all');
 
   // Form state
   const [newLeadName, setNewLeadName] = useState('');
@@ -82,6 +100,42 @@ export default function CRMPipelinePage({ embedded = false }: { embedded?: boole
     if (data) setLeads(data as PipelineLead[]);
     setIsLoading(false);
   }, [user, isAdmin]);
+
+  // Fetch all assignable reps (admin only)
+  useEffect(() => {
+    if (!isAdmin) return;
+    (async () => {
+      const [{ data: profiles }, { data: roles }] = await Promise.all([
+        supabase.from('profiles').select('user_id, full_name').eq('is_active', true),
+        supabase.from('user_roles').select('user_id, role'),
+      ]);
+      const allowed = new Set(
+        (roles ?? [])
+          .filter((r: any) => ['sales_rep', 'team_lead', 'scout'].includes(r.role))
+          .map((r: any) => r.user_id)
+      );
+      const list = (profiles ?? [])
+        .filter((p: any) => allowed.has(p.user_id))
+        .map((p: any) => ({ user_id: p.user_id, full_name: p.full_name || 'Unnamed' }));
+      setReps(list as RepProfile[]);
+    })();
+  }, [isAdmin]);
+
+  const repById = (id?: string | null) => reps.find(r => r.user_id === id);
+
+  const handleAssignRep = async (leadId: string, newOwnerId: string | null) => {
+    const { error } = await supabase
+      .from('pipeline_leads')
+      .update({ owner_id: newOwnerId } as any)
+      .eq('id', leadId);
+    if (error) { toast.error('Failed to assign rep'); return; }
+    toast.success(newOwnerId ? `Assigned to ${repById(newOwnerId)?.full_name ?? 'rep'}` : 'Unassigned');
+    // Optimistic update
+    setLeads(prev => prev.map(l => (l.id === leadId ? { ...l, owner_id: newOwnerId as any } : l)));
+    if (selectedLead?.id === leadId) {
+      setSelectedLead({ ...selectedLead, owner_id: newOwnerId as any });
+    }
+  };
 
   const fetchActivities = useCallback(async (leadId: string) => {
     const { data } = await supabase.from('lead_activities').select('*').eq('lead_id', leadId).order('created_at', { ascending: false });
@@ -158,7 +212,12 @@ export default function CRMPipelinePage({ embedded = false }: { embedded?: boole
     }
   };
 
-  const getLeadsByStage = (stage: string) => leads.filter(l => l.stage === stage);
+  const visibleLeads = (() => {
+    if (!isAdmin || filterRepId === 'all') return leads;
+    if (filterRepId === '__unassigned__') return leads.filter(l => !l.owner_id);
+    return leads.filter(l => l.owner_id === filterRepId);
+  })();
+  const getLeadsByStage = (stage: string) => visibleLeads.filter(l => l.stage === stage);
 
   const activityIcon = (type: string) => {
     switch (type) {
@@ -179,9 +238,24 @@ export default function CRMPipelinePage({ embedded = false }: { embedded?: boole
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">CRM Pipeline</h1>
-            <p className="text-muted-foreground">{leads.length} leads in pipeline</p>
+            <p className="text-muted-foreground">{visibleLeads.length} leads in pipeline</p>
           </div>
-          <Dialog open={showAddLead} onOpenChange={setShowAddLead}>
+          <div className="flex items-center gap-3">
+            {isAdmin && (
+              <Select value={filterRepId} onValueChange={setFilterRepId}>
+                <SelectTrigger className="w-44">
+                  <SelectValue placeholder="All Reps" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Reps</SelectItem>
+                  <SelectItem value="__unassigned__">Unassigned</SelectItem>
+                  {reps.map(r => (
+                    <SelectItem key={r.user_id} value={r.user_id}>{r.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <Dialog open={showAddLead} onOpenChange={setShowAddLead}>
             <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-2" /> New Lead</Button></DialogTrigger>
             <DialogContent>
               <DialogHeader><DialogTitle>Add New Lead</DialogTitle></DialogHeader>
@@ -228,6 +302,7 @@ export default function CRMPipelinePage({ embedded = false }: { embedded?: boole
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* Pipeline Kanban */}
@@ -271,6 +346,22 @@ export default function CRMPipelinePage({ embedded = false }: { embedded?: boole
                               <span>{formatDistanceToNow(new Date(lead.last_activity_at), { addSuffix: true })}</span>
                               {lead.stage === 'follow_up' && (
                                 <span className="text-[hsl(var(--status-amber))]">{lead.follow_ups_completed}/{lead.max_follow_ups}</span>
+                              )}
+                            </div>
+                            {/* Assigned rep avatar / unassigned badge */}
+                            <div className="flex justify-end pt-1">
+                              {lead.owner_id ? (
+                                <div
+                                  title={repById(lead.owner_id)?.full_name || 'Assigned'}
+                                  className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-semibold text-white ring-1 ring-border"
+                                  style={{ backgroundColor: avatarColor(lead.owner_id) }}
+                                >
+                                  {initialsOf(repById(lead.owner_id)?.full_name || '?')}
+                                </div>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px] py-0 px-1.5 text-muted-foreground border-dashed">
+                                  Unassigned
+                                </Badge>
                               )}
                             </div>
                           </CardContent>
@@ -331,6 +422,27 @@ export default function CRMPipelinePage({ embedded = false }: { embedded?: boole
                     <p className="text-xs text-muted-foreground">Follow-ups</p>
                     <p className="text-sm">{selectedLead?.follow_ups_completed} / {selectedLead?.max_follow_ups}</p>
                   </div>
+                  {isAdmin && (
+                    <div className="space-y-1 col-span-2">
+                      <p className="text-xs text-muted-foreground">Assigned To</p>
+                      <Select
+                        value={selectedLead?.owner_id || '__unassigned__'}
+                        onValueChange={(v) => {
+                          if (selectedLead) handleAssignRep(selectedLead.id, v === '__unassigned__' ? null : v);
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Unassigned" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__unassigned__">Unassigned</SelectItem>
+                          {reps.map(r => (
+                            <SelectItem key={r.user_id} value={r.user_id}>{r.full_name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
                 {selectedLead?.notes && (
                   <div className="space-y-1">

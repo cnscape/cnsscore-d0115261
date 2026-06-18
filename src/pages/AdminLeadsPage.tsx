@@ -201,6 +201,21 @@ export default function AdminLeadsPage() {
   const scoutPerformance = getPerformance(scouts);
   const salesPerformance = getPerformance(salesReps);
 
+  // Workload table — all reps with stage breakdown
+  const workload = [...salesReps, ...scouts].map(p => {
+    const repLeads = leads.filter(l => l.owner_id === p.user_id);
+    const inProgressStages = ['dm_sent', 'responded', 'discovery_booked', 'presentation', 'follow_up'];
+    return {
+      profile: p,
+      role: getUserRole(p.user_id),
+      total: repLeads.length,
+      newLeads: repLeads.filter(l => l.stage === 'new_lead').length,
+      inProgress: repLeads.filter(l => inProgressStages.includes(l.stage)).length,
+      won: repLeads.filter(l => l.stage === 'closed_won').length,
+      lost: repLeads.filter(l => l.stage === 'closed_lost').length,
+    };
+  }).sort((a, b) => b.total - a.total);
+
   if (isLoading) {
     return <AppLayout><div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></AppLayout>;
   }
@@ -383,6 +398,58 @@ export default function AdminLeadsPage() {
           <StatCard title="Deals Won" value={leads.filter(l => l.stage === 'closed_won').length} icon={<TrendingUp className="h-5 w-5" />} variant="glow" />
           <StatCard title="Active Pipeline" value={leads.filter(l => !['closed_won', 'closed_lost'].includes(l.stage)).length} icon={<ArrowRight className="h-5 w-5" />} />
         </div>
+
+        {/* Rep Workload Overview */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Users className="h-5 w-5 text-primary" /> Rep Workload
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {workload.length > 0 ? (
+              <div className="rounded-xl border border-border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead>Rep Name</TableHead>
+                      <TableHead className="text-right">Total Leads</TableHead>
+                      <TableHead className="text-right">New</TableHead>
+                      <TableHead className="text-right">In Progress</TableHead>
+                      <TableHead className="text-right">Closed Won</TableHead>
+                      <TableHead className="text-right">Closed Lost</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {workload.map(w => (
+                      <TableRow
+                        key={w.profile.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => setSelectedRepId(w.profile.user_id)}
+                      >
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <span>{w.profile.full_name}</span>
+                            <Badge variant="outline" className="text-[10px] py-0 px-1.5 capitalize">
+                              {w.role.replace('_', ' ')}
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-mono">{w.total}</TableCell>
+                        <TableCell className="text-right font-mono">{w.newLeads}</TableCell>
+                        <TableCell className="text-right font-mono text-[hsl(var(--status-amber))]">{w.inProgress}</TableCell>
+                        <TableCell className="text-right font-mono text-[hsl(var(--status-green))]">{w.won}</TableCell>
+                        <TableCell className="text-right font-mono text-destructive">{w.lost}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground py-4">No reps found</p>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Role-Based Performance Split */}
         <div className="grid gap-6 md:grid-cols-2">
