@@ -201,6 +201,21 @@ export default function AdminLeadsPage() {
   const scoutPerformance = getPerformance(scouts);
   const salesPerformance = getPerformance(salesReps);
 
+  // Workload table — all reps with stage breakdown
+  const workload = [...salesReps, ...scouts].map(p => {
+    const repLeads = leads.filter(l => l.owner_id === p.user_id);
+    const inProgressStages = ['dm_sent', 'responded', 'discovery_booked', 'presentation', 'follow_up'];
+    return {
+      profile: p,
+      role: getUserRole(p.user_id),
+      total: repLeads.length,
+      newLeads: repLeads.filter(l => l.stage === 'new_lead').length,
+      inProgress: repLeads.filter(l => inProgressStages.includes(l.stage)).length,
+      won: repLeads.filter(l => l.stage === 'closed_won').length,
+      lost: repLeads.filter(l => l.stage === 'closed_lost').length,
+    };
+  }).sort((a, b) => b.total - a.total);
+
   if (isLoading) {
     return <AppLayout><div className="flex items-center justify-center h-full"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div></AppLayout>;
   }
