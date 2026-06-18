@@ -348,6 +348,22 @@ export default function CRMPipelinePage({ embedded = false }: { embedded?: boole
                                 <span className="text-[hsl(var(--status-amber))]">{lead.follow_ups_completed}/{lead.max_follow_ups}</span>
                               )}
                             </div>
+                            {/* Assigned rep avatar / unassigned badge */}
+                            <div className="flex justify-end pt-1">
+                              {lead.owner_id ? (
+                                <div
+                                  title={repById(lead.owner_id)?.full_name || 'Assigned'}
+                                  className="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-semibold text-white ring-1 ring-border"
+                                  style={{ backgroundColor: avatarColor(lead.owner_id) }}
+                                >
+                                  {initialsOf(repById(lead.owner_id)?.full_name || '?')}
+                                </div>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px] py-0 px-1.5 text-muted-foreground border-dashed">
+                                  Unassigned
+                                </Badge>
+                              )}
+                            </div>
                           </CardContent>
                         </Card>
                       ))}
