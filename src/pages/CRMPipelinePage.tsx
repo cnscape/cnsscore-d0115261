@@ -212,9 +212,11 @@ export default function CRMPipelinePage({ embedded = false }: { embedded?: boole
     }
   };
 
-  const visibleLeads = isAdmin && filterRepId !== 'all'
-    ? leads.filter(l => l.owner_id === filterRepId)
-    : leads;
+  const visibleLeads = (() => {
+    if (!isAdmin || filterRepId === 'all') return leads;
+    if (filterRepId === '__unassigned__') return leads.filter(l => !l.owner_id);
+    return leads.filter(l => l.owner_id === filterRepId);
+  })();
   const getLeadsByStage = (stage: string) => visibleLeads.filter(l => l.stage === stage);
 
   const activityIcon = (type: string) => {
