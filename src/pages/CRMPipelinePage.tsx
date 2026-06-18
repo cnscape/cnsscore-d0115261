@@ -422,6 +422,27 @@ export default function CRMPipelinePage({ embedded = false }: { embedded?: boole
                     <p className="text-xs text-muted-foreground">Follow-ups</p>
                     <p className="text-sm">{selectedLead?.follow_ups_completed} / {selectedLead?.max_follow_ups}</p>
                   </div>
+                  {isAdmin && (
+                    <div className="space-y-1 col-span-2">
+                      <p className="text-xs text-muted-foreground">Assigned To</p>
+                      <Select
+                        value={selectedLead?.owner_id || '__unassigned__'}
+                        onValueChange={(v) => {
+                          if (selectedLead) handleAssignRep(selectedLead.id, v === '__unassigned__' ? null : v);
+                        }}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Unassigned" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__unassigned__">Unassigned</SelectItem>
+                          {reps.map(r => (
+                            <SelectItem key={r.user_id} value={r.user_id}>{r.full_name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
                 {selectedLead?.notes && (
                   <div className="space-y-1">
